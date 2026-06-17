@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { Canvas, PencilBrush, Line, Rect, Ellipse, Triangle, IText, Textbox, Group, Shadow } from 'fabric';
+import { Canvas, PencilBrush, Line, Rect, Ellipse, Triangle, IText, Textbox, Group } from 'fabric';
 import { useStore } from '../store/useStore';
 import type { DrawTool } from '../store/useStore';
 import { cn } from '../utils/cn';
@@ -61,6 +61,7 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
         const json = historyRef.current[historyIndexRef.current];
         fabricRef.current?.loadFromJSON(JSON.parse(json)).then(() => {
           fabricRef.current?.renderAll();
+          isInternalChangeRef.current = true;
           updateAnnotation(slideId, json);
           isHistoryUpdate.current = false;
         });
@@ -74,6 +75,7 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
         const json = historyRef.current[historyIndexRef.current];
         fabricRef.current?.loadFromJSON(JSON.parse(json)).then(() => {
           fabricRef.current?.renderAll();
+          isInternalChangeRef.current = true;
           updateAnnotation(slideId, json);
           isHistoryUpdate.current = false;
         });
@@ -129,6 +131,41 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
       historyIndexRef.current = 0;
     }
   }, [slideId]);
+
+  // Sync external changes (like "Clear This Slide") to canvas
+  useEffect(() => {
+    if (!fabricRef.current) return;
+    
+    // Ignore internal changes to prevent infinite loops and flickering
+    if (isInternalChangeRef.current) {
+      isInternalChangeRef.current = false;
+      return;
+    }
+
+    if (!slide?.annotation.fabricJSON) {
+      // The slide was cleared externally
+      fabricRef.current.clear();
+      // Re-apply tools
+      if (currentTool === 'pen' || currentTool === 'highlighter') {
+        fabricRef.current.isDrawingMode = true;
+      }
+    } else {
+      // The slide was loaded externally
+      try {
+        const parsed = typeof slide.annotation.fabricJSON === 'string'
+          ? JSON.parse(slide.annotation.fabricJSON)
+          : slide.annotation.fabricJSON;
+          
+        isHistoryUpdate.current = true;
+        fabricRef.current.loadFromJSON(parsed).then(() => {
+          fabricRef.current?.renderAll();
+          isHistoryUpdate.current = false;
+        });
+      } catch (e) {
+        console.error('Failed to load annotation externally:', e);
+      }
+    }
+  }, [slide?.annotation.fabricJSON, currentTool]);
 
   // Update canvas mode based on tool
   useEffect(() => {
@@ -219,9 +256,8 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
 
     if (currentTool === 'eraser') {
       isDrawingRef.current = true;
-      const target = canvas.findTarget(opt.e, false);
-      if (target) {
-        canvas.remove(target);
+      if (opt.target) {
+        canvas.remove(opt.target);
         saveCanvasState();
       }
       return;
@@ -319,9 +355,8 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
     if (!canvas || !isDrawingRef.current) return;
 
     if (currentTool === 'eraser') {
-      const target = canvas.findTarget(opt.e, false);
-      if (target) {
-        canvas.remove(target);
+      if (opt.target) {
+        canvas.remove(opt.target);
         saveCanvasState();
       }
       return;
