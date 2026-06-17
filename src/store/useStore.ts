@@ -744,7 +744,13 @@ export const useStore = create<AppStore>()(
       // ── Settings ──
       settings: DEFAULT_SETTINGS,
       updateSettings: (updates) =>
-        set((s) => ({ settings: { ...s.settings, ...updates } })),
+        set((s) => {
+          const newState: any = { settings: { ...s.settings, ...updates } };
+          if (updates.renderingQuality && updates.renderingQuality !== s.settings.renderingQuality) {
+            newState.renderedPages = {};
+          }
+          return newState;
+        }),
 
       // ── PDF Rendering ──
       renderedPages: {},

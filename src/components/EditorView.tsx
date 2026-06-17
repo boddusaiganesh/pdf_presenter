@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Save, Play, Home, Plus, Film, Download,
-  Settings, BookOpen, ChevronRight, Keyboard,
+  Settings, BookOpen, ChevronRight, ChevronDown, Keyboard,
   FileText, Zap, AlertTriangle, Clock
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
@@ -19,7 +19,7 @@ import toast from 'react-hot-toast';
 export default function EditorView() {
   const {
     currentSession, setCurrentScreen, saveCurrentSession,
-    showSettings, setShowSettings, settings,
+    showSettings, setShowSettings, settings, updateSettings,
     currentSlideIndex, setCurrentSlideIndex,
     isToolbarVisible, setIsToolbarVisible,
     isSidePanelOpen, setIsSidePanelOpen,
@@ -242,6 +242,21 @@ export default function EditorView() {
               Saved
             </span>
           )}
+
+          {/* Resolution Selector */}
+          <div className="relative group mr-2">
+            <select
+              value={String(settings.renderingQuality)}
+              onChange={(e) => updateSettings({ renderingQuality: Number(e.target.value) as 1 | 2 | 4 })}
+              className="appearance-none bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-white/70 hover:text-white text-xs px-2.5 py-1.5 rounded-lg pr-7 outline-none cursor-pointer transition-colors"
+              title="Change Resolution"
+            >
+              <option value="1" className="bg-slate-800">1x Res (Fast)</option>
+              <option value="2" className="bg-slate-800">2x Res (Sharp)</option>
+              <option value="4" className="bg-slate-800">4x Res (Ultra)</option>
+            </select>
+            <ChevronDown className="w-3 h-3 text-white/40 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none group-hover:text-white/70" />
+          </div>
 
           <button
             onClick={() => setShowNotePanel(!showNotePanel)}
