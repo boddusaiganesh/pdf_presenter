@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore';
 import { renderPage } from '../utils/pdfRenderer';
 import { detectMediaType, isVideoType } from '../utils/mediaDetector';
 import AnnotationCanvas from './AnnotationCanvas';
+import html2canvas from 'html2canvas';
 import { cn } from '../utils/cn';
 import {
   Film, Image as ImageIcon, Globe, FileText, Maximize2,
@@ -27,7 +28,8 @@ export default function SlideCanvas({ isPresenting = false }: SlideCanvasProps) 
   const [canvasSize, setCanvasSize] = useState({ width: 1280, height: 720 });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
-  const frozenImageRef = useRef<string | null>(null);
+  const [frozenImage, setFrozenImage] = useState<string | null>(null);
+  const previousIsFrozen = useRef(isFrozen);
   const [videoRef] = useState(() => ({ current: null as HTMLVideoElement | null }));
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [isVideoMuted, setIsVideoMuted] = useState(false);
@@ -58,6 +60,20 @@ export default function SlideCanvas({ isPresenting = false }: SlideCanvasProps) 
     observer.observe(container);
     return () => observer.disconnect();
   }, []);
+
+  // Handle Freezing Canvas
+  useEffect(() => {
+    if (isFrozen && !previousIsFrozen.current) {
+      if (canvasContainerRef.current) {
+        html2canvas(canvasContainerRef.current, { backgroundColor: null, useCORS: true }).then(canvas => {
+          setFrozenImage(canvas.toDataURL('image/png'));
+        }).catch(err => console.error("Failed to freeze canvas:", err));
+      }
+    } else if (!isFrozen && previousIsFrozen.current) {
+      setFrozenImage(null);
+    }
+    previousIsFrozen.current = isFrozen;
+  }, [isFrozen]);
 
   // Render PDF pages in background
   useEffect(() => {
@@ -359,9 +375,9 @@ export default function SlideCanvas({ isPresenting = false }: SlideCanvasProps) 
           ) : (
             <>
               {/* Frozen overlay */}
-              {isFrozen && frozenImageRef.current && (
+              {isFrozen && frozenImage && (
                 <div className="absolute inset-0 z-40">
-                  <img src={frozenImageRef.current} alt="frozen" className="w-full h-full" />
+                  <img src={frozenImage} alt="frozen" className="w-full h-full" />
                   <div className="absolute top-4 right-4 px-3 py-1.5 bg-black/70 rounded-full text-white/60 text-xs flex items-center gap-1.5">
                     <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
                     Frozen

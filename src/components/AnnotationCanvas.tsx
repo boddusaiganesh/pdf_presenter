@@ -39,6 +39,8 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
       height,
       renderOnAddRemove: true,
       enableRetinaScaling: false,
+      perPixelTargetFind: true,
+      targetFindTolerance: 8,
     });
 
     fabricRef.current = canvas;
@@ -162,12 +164,22 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
 
     canvas.isDrawingMode = false;
     canvas.selection = false;
+    canvas.discardActiveObject();
+
+    // Reset selectability
+    canvas.forEachObject((obj) => {
+      obj.selectable = false;
+      obj.evented = true;
+    });
 
     switch (currentTool) {
       case 'pen': {
         canvas.isDrawingMode = true;
         const brush = new PencilBrush(canvas);
-        brush.color = drawColor;
+        const r = parseInt(drawColor.slice(1, 3), 16) || 0;
+        const g = parseInt(drawColor.slice(3, 5), 16) || 0;
+        const b = parseInt(drawColor.slice(5, 7), 16) || 0;
+        brush.color = `rgba(${r}, ${g}, ${b}, ${drawOpacity})`;
         brush.width = drawSize;
         if (isDashedStroke) (brush as any).strokeDashArray = [10, 5];
         canvas.freeDrawingBrush = brush;
@@ -176,7 +188,10 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
       case 'highlighter': {
         canvas.isDrawingMode = true;
         const hBrush = new PencilBrush(canvas);
-        hBrush.color = drawColor;
+        const r = parseInt(drawColor.slice(1, 3), 16) || 0;
+        const g = parseInt(drawColor.slice(3, 5), 16) || 0;
+        const b = parseInt(drawColor.slice(5, 7), 16) || 0;
+        hBrush.color = `rgba(${r}, ${g}, ${b}, ${drawOpacity * 0.4})`; // Highlighters are naturally more transparent
         hBrush.width = Math.max(drawSize * 3, 20);
         canvas.freeDrawingBrush = hBrush;
         break;
@@ -194,6 +209,9 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
         canvas.selection = true;
         canvas.defaultCursor = 'default';
         (canvas as any).hoverCursor = 'move';
+        canvas.forEachObject((obj) => {
+          obj.selectable = true;
+        });
         break;
       }
       default: {

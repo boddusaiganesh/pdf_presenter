@@ -90,15 +90,23 @@ export default function HomeScreen() {
     console.log(`[HomeScreen] Opening session ID: ${sessionId}`);
     const session = sessions.find(s => s.id === sessionId);
     
-    if (session && session.pdfData) {
+    if (session) {
       setIsLoading(true);
       setLoadingFileName(session.name);
       setLoadingProgress(50);
+      clearRenderedPages();
+      
       try {
-        // Use native fetch to convert base64 to arraybuffer without blocking the main thread
-        const res = await fetch(`data:application/pdf;base64,${session.pdfData}`);
-        const arrayBuffer = await res.arrayBuffer();
-        await loadPDF(arrayBuffer);
+        const { get: idbGet } = await import('idb-keyval');
+        const base64 = await idbGet(`pdf_data_${session.id}`);
+        
+        if (base64 || session.pdfData) {
+          const data = base64 || session.pdfData;
+          // Use native fetch to convert base64 to arraybuffer without blocking the main thread
+          const res = await fetch(`data:application/pdf;base64,${data}`);
+          const arrayBuffer = await res.arrayBuffer();
+          await loadPDF(arrayBuffer);
+        }
       } catch (e) {
         console.error('Failed to parse saved PDF data:', e);
         toast.error('Failed to read PDF data from session.');
