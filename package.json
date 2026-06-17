@@ -1,0 +1,79 @@
+{
+  "name": "react-vite-tailwind",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "main.cjs",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "electron:start": "npm run build && electron .",
+    "electron:pack:win": "npm run build && electron-builder --win",
+    "electron:pack:mac": "npm run build && electron-builder --mac",
+    "electron:pack:all": "npm run build && electron-builder --win --mac"
+  },
+  "build": {
+    "appId": "com.pdfpresenter.pro",
+    "productName": "PDF Presenter Pro",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "main.cjs"
+    ],
+    "mac": {
+      "target": ["dmg", "zip"],
+      "icon": "public/favicon.ico"
+    },
+    "win": {
+      "target": ["nsis", "portable"],
+      "icon": "public/favicon.ico"
+    }
+  },
+  "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.17",
+    "@radix-ui/react-dropdown-menu": "^2.1.18",
+    "@radix-ui/react-progress": "^1.1.10",
+    "@radix-ui/react-select": "^2.3.1",
+    "@radix-ui/react-slider": "^1.4.1",
+    "@radix-ui/react-switch": "^1.3.1",
+    "@radix-ui/react-tabs": "^1.1.15",
+    "@radix-ui/react-tooltip": "^1.2.10",
+    "@types/fabric": "^5.3.11",
+    "@types/uuid": "^10.0.0",
+    "clsx": "2.1.1",
+    "date-fns": "^4.4.0",
+    "fabric": "^7.4.0",
+    "framer-motion": "^12.40.0",
+    "html2canvas": "^1.4.1",
+    "idb-keyval": "^6.2.5",
+    "jspdf": "^4.2.1",
+    "jszip": "^3.10.1",
+    "lucide-react": "^1.20.0",
+    "pdfjs-dist": "^5.6.205",
+    "react": "19.2.6",
+    "react-colorful": "^5.7.0",
+    "react-dom": "19.2.6",
+    "react-dropzone": "^15.0.0",
+    "react-hot-toast": "^2.6.0",
+    "react-resizable-panels": "^4.11.2",
+    "tailwind-merge": "3.4.0",
+    "uuid": "^14.0.0",
+    "zustand": "^5.0.14"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.1.17",
+    "@types/node": "22.19.17",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "5.1.1",
+    "electron": "^42.4.1",
+    "electron-builder": "^26.15.3",
+    "tailwindcss": "4.1.17",
+    "typescript": "5.9.3",
+    "vite": "7.3.2",
+    "vite-plugin-singlefile": "2.3.0"
+  }
+}
