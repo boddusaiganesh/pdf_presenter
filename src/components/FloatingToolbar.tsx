@@ -5,7 +5,7 @@ import {
   Crosshair, Zap, Eye, EyeOff, ZoomIn, ZoomOut, Maximize2,
   Undo2, Redo2, Trash2, Settings, LayoutGrid, Video,
   Timer, BookOpen, Play, Pause, RotateCcw, Monitor,
-  Triangle, Lasso, Lock
+  Triangle, Lasso, Lock, PanelLeft
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { cn } from '../utils/cn';
@@ -177,7 +177,7 @@ export default function FloatingToolbar() {
   return (
     <>
       {/* Main Toolbar */}
-      <div className="flex items-center gap-1 px-3 py-2 rounded-2xl glass-light border border-white/[0.1] shadow-2xl shadow-black/50 select-none">
+      <div className="flex items-center gap-1 px-3 py-2 rounded-2xl glass border border-white/[0.1] shadow-2xl shadow-black/50 select-none">
 
         {/* Navigation */}
         <ToolbarButton
@@ -526,7 +526,7 @@ export default function FloatingToolbar() {
 
         {/* Side Panel Toggle */}
         <ToolbarButton
-          icon={<LayoutGrid className="w-4 h-4" />}
+          icon={<PanelLeft className="w-4 h-4" />}
           label="Toggle Side Panel"
           shortcut="Ctrl+P"
           onClick={() => setIsSidePanelOpen(!isSidePanelOpen)}

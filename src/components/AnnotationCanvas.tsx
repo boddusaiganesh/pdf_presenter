@@ -182,11 +182,10 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
         break;
       }
       case 'eraser': {
-        canvas.isDrawingMode = true;
-        const eBrush = new PencilBrush(canvas);
-        eBrush.color = 'rgba(0,0,0,0.01)';
-        eBrush.width = drawSize * 4;
-        canvas.freeDrawingBrush = eBrush;
+        canvas.isDrawingMode = false;
+        canvas.selection = false;
+        canvas.defaultCursor = 'cell';
+        (canvas as any).hoverCursor = 'cell';
         break;
       }
       case 'select':
@@ -206,10 +205,19 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
     canvas.renderAll();
   }, [currentTool, drawColor, drawSize, drawOpacity, isDashedStroke]);
 
-  // Mouse handlers for shapes
   const handleMouseDown = useCallback((opt: any) => {
     const canvas = fabricRef.current;
     if (!canvas) return;
+
+    if (currentTool === 'eraser') {
+      isDrawingRef.current = true;
+      const target = canvas.findTarget(opt.e, false);
+      if (target) {
+        canvas.remove(target);
+        updateAnnotation(slideId, JSON.stringify(canvas.toJSON()));
+      }
+      return;
+    }
 
     const shapeTools: DrawTool[] = ['line', 'arrow', 'rectangle', 'circle', 'triangle', 'text', 'sticky'];
     if (!shapeTools.includes(currentTool)) return;
@@ -300,7 +308,18 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
 
   const handleMouseMove = useCallback((opt: any) => {
     const canvas = fabricRef.current;
-    if (!canvas || !isDrawingRef.current || !startPointRef.current || !currentShapeRef.current) return;
+    if (!canvas || !isDrawingRef.current) return;
+
+    if (currentTool === 'eraser') {
+      const target = canvas.findTarget(opt.e, false);
+      if (target) {
+        canvas.remove(target);
+        updateAnnotation(slideId, JSON.stringify(canvas.toJSON()));
+      }
+      return;
+    }
+
+    if (!startPointRef.current || !currentShapeRef.current) return;
 
     const pointer = canvas.getScenePoint(opt.e);
     const start = startPointRef.current;
@@ -327,6 +346,11 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
   const handleMouseUp = useCallback(() => {
     const canvas = fabricRef.current;
     if (!canvas || !isDrawingRef.current) return;
+
+    if (currentTool === 'eraser') {
+      isDrawingRef.current = false;
+      return;
+    }
 
     if (currentShapeRef.current) {
       const shape = currentShapeRef.current;
