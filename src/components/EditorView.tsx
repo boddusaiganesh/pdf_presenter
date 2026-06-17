@@ -331,7 +331,7 @@ export default function EditorView() {
                 setToolbarHideTimer(t);
               }}
             >
-              <FloatingToolbar />
+              <FloatingToolbar onToggleNotes={() => setShowNotePanel(!showNotePanel)} />
             </div>
 
             {/* Always-visible mini nav */}

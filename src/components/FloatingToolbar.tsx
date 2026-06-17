@@ -78,7 +78,7 @@ function ColorSwatch({ color, active, onClick }: ColorSwatchProps) {
 
 const QUICK_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ffffff', '#000000'];
 
-export default function FloatingToolbar() {
+export default function FloatingToolbar({ onToggleNotes }: { onToggleNotes?: () => void }) {
   const {
     currentTool, setCurrentTool,
     drawColor, setDrawColor,
@@ -100,7 +100,7 @@ export default function FloatingToolbar() {
     updateAnnotation,
   } = useStore();
 
-  const [activeSection, setActiveSection] = useState<'draw' | 'pointer' | 'settings' | null>(null);
+  const [activeSection, setActiveSection] = useState<'draw' | 'pointer' | null>(null);
   const [showTimerPanel, setShowTimerPanel] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
 
@@ -521,7 +521,11 @@ export default function FloatingToolbar() {
         <ToolbarButton
           icon={<BookOpen className="w-4 h-4" />}
           label="Speaker Notes"
-          onClick={() => setActiveSection(activeSection === 'settings' ? null : 'settings')}
+          onClick={() => {
+            if (onToggleNotes) {
+              onToggleNotes();
+            }
+          }}
         />
 
         {/* Side Panel Toggle */}

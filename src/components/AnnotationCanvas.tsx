@@ -305,20 +305,24 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
     if (currentTool === 'sticky') {
       const colors = ['#fef08a', '#bbf7d0', '#bfdbfe', '#fecaca', '#ddd6fe'];
       const color = colors[Math.floor(Math.random() * colors.length)];
-      const rect = new Rect({
-        width: 160, height: 100, fill: color, rx: 6, ry: 6,
-        stroke: 'rgba(0,0,0,0.1)', strokeWidth: 1,
-      });
       const text = new Textbox('Sticky note...', {
-        width: 140, top: 10, left: 10,
-        fill: '#1e293b', fontSize: 13, fontFamily: 'Inter',
+        left: pointer.x,
+        top: pointer.y,
+        width: 160,
+        backgroundColor: color,
+        fill: '#1e293b',
+        fontSize: 14,
+        fontFamily: 'Inter',
+        selectable: true,
+        evented: true,
+        padding: 12,
+        splitByGrapheme: true,
       });
-      const group = new Group([rect, text], {
-        left: pointer.x, top: pointer.y, selectable: true, evented: true,
-      });
-      canvas.add(group);
+      canvas.add(text);
+      canvas.setActiveObject(text);
+      text.enterEditing();
+      text.selectAll();
       isDrawingRef.current = false;
-      updateAnnotation(slideId, JSON.stringify(canvas.toJSON()));
       return;
     }
 
