@@ -19,6 +19,7 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
   const historyRef = useRef<string[]>([]);
   const historyIndexRef = useRef<number>(-1);
   const isHistoryUpdate = useRef(false);
+  const isInternalChangeRef = useRef(false);
 
   const {
     currentTool, drawColor, drawSize, drawOpacity,
@@ -44,37 +45,6 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
     });
 
     fabricRef.current = canvas;
-
-    // Load saved annotation
-    if (slide?.annotation.fabricJSON) {
-      try {
-        canvas.loadFromJSON(JSON.parse(slide.annotation.fabricJSON)).then(() => {
-          canvas.renderAll();
-        });
-      } catch (e) {
-        console.error('Failed to load annotation:', e);
-      }
-    }
-
-    // Save on modification
-    const saveAnnotation = () => {
-      if (isHistoryUpdate.current) return;
-      const json = JSON.stringify(canvas.toJSON());
-      
-      const newHistory = historyRef.current.slice(0, historyIndexRef.current + 1);
-      newHistory.push(json);
-      if (newHistory.length > 50) newHistory.shift();
-      
-      historyRef.current = newHistory;
-      historyIndexRef.current = newHistory.length - 1;
-      
-      updateAnnotation(slideId, json);
-    };
-
-    canvas.on('object:modified', saveAnnotation);
-    canvas.on('object:added', saveAnnotation);
-    canvas.on('object:removed', saveAnnotation);
-    canvas.on('path:created', saveAnnotation);
 
     return () => {
       canvas.dispose();
@@ -143,12 +113,15 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
         // Reset history stack for this slide
         historyRef.current = [typeof slide.annotation.fabricJSON === 'string' ? slide.annotation.fabricJSON : JSON.stringify(slide.annotation.fabricJSON)];
         historyIndexRef.current = 0;
-
+        
+        isHistoryUpdate.current = true;
         canvas.loadFromJSON(parsed).then(() => {
           canvas.renderAll();
+          isHistoryUpdate.current = false;
         });
       } catch (e) {
         console.error('Failed to load annotation:', e);
+        isHistoryUpdate.current = false;
       }
     } else {
       // Empty canvas history start
@@ -223,6 +196,23 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
     canvas.renderAll();
   }, [currentTool, drawColor, drawSize, drawOpacity, isDashedStroke]);
 
+  const saveCanvasState = useCallback(() => {
+    if (!fabricRef.current) return;
+    if (isHistoryUpdate.current) return;
+    
+    isInternalChangeRef.current = true;
+    const json = JSON.stringify(fabricRef.current.toJSON());
+    
+    const newHistory = historyRef.current.slice(0, historyIndexRef.current + 1);
+    newHistory.push(json);
+    if (newHistory.length > 50) newHistory.shift();
+    
+    historyRef.current = newHistory;
+    historyIndexRef.current = newHistory.length - 1;
+    
+    updateAnnotation(slideId, json);
+  }, [slideId, updateAnnotation]);
+
   const handleMouseDown = useCallback((opt: any) => {
     const canvas = fabricRef.current;
     if (!canvas) return;
@@ -232,7 +222,7 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
       const target = canvas.findTarget(opt.e, false);
       if (target) {
         canvas.remove(target);
-        updateAnnotation(slideId, JSON.stringify(canvas.toJSON()));
+        saveCanvasState();
       }
       return;
     }
@@ -332,7 +322,7 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
       const target = canvas.findTarget(opt.e, false);
       if (target) {
         canvas.remove(target);
-        updateAnnotation(slideId, JSON.stringify(canvas.toJSON()));
+        saveCanvasState();
       }
       return;
     }
@@ -394,13 +384,13 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
         canvas.add(arrowHead);
       }
 
-      updateAnnotation(slideId, JSON.stringify(canvas.toJSON()));
+      saveCanvasState();
       currentShapeRef.current = null;
     }
 
     isDrawingRef.current = false;
     startPointRef.current = null;
-  }, [currentTool, drawColor, drawSize, slideId, updateAnnotation]);
+  }, [currentTool, drawColor, drawSize, saveCanvasState]);
 
   // Attach events
   useEffect(() => {
@@ -410,13 +400,21 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
     canvas.on('mouse:down', handleMouseDown);
     canvas.on('mouse:move', handleMouseMove);
     canvas.on('mouse:up', handleMouseUp);
+    canvas.on('path:created', saveCanvasState);
+    canvas.on('object:modified', saveCanvasState);
+    canvas.on('object:added', saveCanvasState);
+    canvas.on('object:removed', saveCanvasState);
 
     return () => {
       canvas.off('mouse:down', handleMouseDown);
       canvas.off('mouse:move', handleMouseMove);
       canvas.off('mouse:up', handleMouseUp);
+      canvas.off('path:created', saveCanvasState);
+      canvas.off('object:modified', saveCanvasState);
+      canvas.off('object:added', saveCanvasState);
+      canvas.off('object:removed', saveCanvasState);
     };
-  }, [handleMouseDown, handleMouseMove, handleMouseUp]);
+  }, [handleMouseDown, handleMouseMove, handleMouseUp, saveCanvasState]);
 
   const getCursorClass = () => {
     switch (currentTool) {

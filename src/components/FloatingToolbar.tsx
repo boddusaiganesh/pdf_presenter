@@ -5,7 +5,7 @@ import {
   Crosshair, Zap, Eye, EyeOff, ZoomIn, ZoomOut, Maximize2,
   Undo2, Redo2, Trash2, Settings, LayoutGrid, Video,
   Timer, BookOpen, Play, Pause, RotateCcw, Monitor,
-  Triangle, Lasso, Lock, PanelLeft
+  Triangle, Lasso, Lock, PanelLeft, Bomb
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { cn } from '../utils/cn';
@@ -298,7 +298,7 @@ export default function FloatingToolbar() {
                   }}
                 />
                 <ToolbarButton
-                  icon={<Trash2 className="w-4 h-4" />}
+                  icon={<Bomb className="w-4 h-4 text-red-500" />}
                   label="Clear All Slides"
                   shortcut="Ctrl+Shift+D"
                   danger
