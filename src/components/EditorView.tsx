@@ -32,9 +32,9 @@ export default function EditorView() {
     lastAutoSave, setLastAutoSave,
     clearSlideAnnotation, clearAllAnnotations,
     setPreflightCheck,
+    isMediaPanelOpen, openMediaPanel, closeMediaPanel, mediaPanelInsertIndex
   } = useStore();
 
-  const [showMediaPanel, setShowMediaPanel] = useState(false);
   const [showNotePanel, setShowNotePanel] = useState(false);
   const [toolbarHideTimer, setToolbarHideTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   const isMouseNearToolbar = useRef(false);
@@ -254,7 +254,7 @@ export default function EditorView() {
           </button>
 
           <button
-            onClick={() => setShowMediaPanel(true)}
+            onClick={() => openMediaPanel()}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-white/50 hover:text-white hover:bg-white/[0.06] transition-all"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -357,10 +357,10 @@ export default function EditorView() {
 
       {/* Modals */}
       {showSettings && <SettingsPanel />}
-      {showMediaPanel && (
+      {isMediaPanelOpen && (
         <MediaInsertPanel
-          onClose={() => setShowMediaPanel(false)}
-          insertAfterIndex={currentSlideIndex}
+          onClose={closeMediaPanel}
+          insertAfterIndex={mediaPanelInsertIndex}
         />
       )}
     </div>

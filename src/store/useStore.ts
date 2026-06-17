@@ -242,6 +242,12 @@ interface AppStore {
   setZoomLevel: (v: number) => void;
   setPanOffset: (offset: { x: number; y: number }) => void;
 
+  // ── Media Panel ──
+  isMediaPanelOpen: boolean;
+  mediaPanelInsertIndex?: number;
+  openMediaPanel: (insertAfterIndex?: number) => void;
+  closeMediaPanel: () => void;
+
   // ── Drawing ──
   currentTool: DrawTool;
   drawColor: string;
@@ -632,6 +638,12 @@ export const useStore = create<AppStore>()(
       setIsToolbarVisible: (v) => set({ isToolbarVisible: v }),
       setZoomLevel: (v) => set({ zoomLevel: Math.max(0.5, Math.min(4, v)) }),
       setPanOffset: (offset) => set({ panOffset: offset }),
+
+      // ── Media Panel ──
+      isMediaPanelOpen: false,
+      mediaPanelInsertIndex: undefined,
+      openMediaPanel: (index) => set({ isMediaPanelOpen: true, mediaPanelInsertIndex: index }),
+      closeMediaPanel: () => set({ isMediaPanelOpen: false, mediaPanelInsertIndex: undefined }),
 
       // ── Drawing ──
       currentTool: 'select',

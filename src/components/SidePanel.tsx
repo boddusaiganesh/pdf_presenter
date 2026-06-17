@@ -135,7 +135,7 @@ interface ContextMenuProps {
 function ContextMenu({ x, y, slideIndex, slide, onClose }: ContextMenuProps) {
   const {
     toggleHideSlide, removeSlide, duplicateSlide,
-    addSlide
+    addSlide, openMediaPanel
   } = useStore();
 
   const menuRef = useRef<HTMLDivElement>(null);
@@ -166,6 +166,17 @@ function ContextMenu({ x, y, slideIndex, slide, onClose }: ContextMenuProps) {
       label: 'Insert Blank Black Slide',
       icon: <Layout className="w-3.5 h-3.5" />,
       action: () => addSlide({ type: 'blank-black' }, slideIndex),
+    },
+    { separator: true },
+    {
+      label: 'Insert Media / Image',
+      icon: <Image className="w-3.5 h-3.5" />,
+      action: () => openMediaPanel(slideIndex),
+    },
+    {
+      label: 'Insert Video',
+      icon: <Film className="w-3.5 h-3.5" />,
+      action: () => openMediaPanel(slideIndex),
     },
     { separator: true },
     {
@@ -221,7 +232,7 @@ export default function SidePanel() {
   const {
     currentSession, currentSlideIndex, setCurrentSlideIndex,
     isSidePanelOpen, setIsSidePanelOpen, renderedPages,
-    addSlide, reorderSlide
+    addSlide, reorderSlide, openMediaPanel
   } = useStore();
 
   const [dragFromIndex, setDragFromIndex] = useState<number | null>(null);
@@ -289,15 +300,19 @@ export default function SidePanel() {
                     {[
                       { label: 'Blank White Slide', icon: <Layout className="w-3.5 h-3.5" />, type: 'blank-white' as const },
                       { label: 'Blank Black Slide', icon: <Layout className="w-3.5 h-3.5" />, type: 'blank-black' as const },
-                      { label: 'Image Slide', icon: <Image className="w-3.5 h-3.5" />, type: 'image' as const },
-                      { label: 'Video Slide', icon: <Film className="w-3.5 h-3.5" />, type: 'video' as const },
-                      { label: 'Web/iFrame Slide', icon: <Link className="w-3.5 h-3.5" />, type: 'iframe' as const },
+                      { label: 'Image Slide', icon: <Image className="w-3.5 h-3.5" />, type: 'image' as const, isMedia: true },
+                      { label: 'Video Slide', icon: <Film className="w-3.5 h-3.5" />, type: 'video' as const, isMedia: true },
+                      { label: 'Web/iFrame Slide', icon: <Link className="w-3.5 h-3.5" />, type: 'iframe' as const, isMedia: true },
                     ].map((item) => (
                       <button
                         key={item.label}
                         className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-white/70 hover:text-white hover:bg-white/[0.05] transition-colors"
                         onClick={() => {
-                          addSlide({ type: item.type }, currentSlideIndex);
+                          if (item.isMedia) {
+                            openMediaPanel(currentSlideIndex);
+                          } else {
+                            addSlide({ type: item.type }, currentSlideIndex);
+                          }
                           setShowAddMenu(false);
                         }}
                       >
