@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import {
   Eye, EyeOff, Trash2, Copy, Plus, GripVertical, Film,
   Image, FileText, X, ChevronRight,
-  Video, Link, Layout, AlignJustify
+  Video, Link, Layout, AlignJustify, MoreHorizontal
 } from 'lucide-react';
 import { useStore, Slide } from '../store/useStore';
 import { cn } from '../utils/cn';
@@ -82,6 +82,20 @@ function SlideThumbnail({
       {/* Drag Handle */}
       <div className="absolute left-0 top-0 bottom-0 w-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all z-10 cursor-grab active:cursor-grabbing">
         <GripVertical className="w-3 h-3 text-white/40" />
+      </div>
+
+      {/* Tools Menu Button (3 dots) */}
+      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onContextMenu(e, index);
+          }}
+          className="p-1 rounded-md bg-black/60 hover:bg-black/90 text-white/80 hover:text-white backdrop-blur shadow-sm transition-all"
+          title="Slide Options"
+        >
+          <MoreHorizontal className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Thumbnail */}
