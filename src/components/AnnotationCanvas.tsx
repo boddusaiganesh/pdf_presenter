@@ -387,13 +387,16 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
     }
   };
 
+  const isInteractiveMedia = slide?.type && !['pdf', 'image', 'blank-white', 'blank-black'].includes(slide.type);
+  const shouldPassThroughEvents = currentTool === 'select' && isInteractiveMedia;
+
   return (
     <div
       className={cn(
         'absolute inset-0',
         getCursorClass(),
         slide?.annotation.visible === false ? 'opacity-0' : 'opacity-100',
-        slide?.annotation.locked ? 'pointer-events-none' : 'pointer-events-auto'
+        slide?.annotation.locked || shouldPassThroughEvents ? 'pointer-events-none' : 'pointer-events-auto'
       )}
       style={{ zIndex: 20 }}
     >
