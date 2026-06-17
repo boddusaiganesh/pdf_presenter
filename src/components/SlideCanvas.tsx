@@ -67,19 +67,13 @@ export default function SlideCanvas({ isPresenting = false }: SlideCanvasProps) 
     
     slides.forEach((slide) => {
       if (slide.type === 'pdf' && slide.pdfPageIndex !== undefined) {
-        const currentPage = currentSlide?.pdfPageIndex ?? 0;
-        const distance = Math.abs(slide.pdfPageIndex - currentPage);
-        
-        // Only render if within preload radius to prevent Out of Memory errors
-        if (distance <= settings.preloadSlides) {
-          if (!renderedPages[slide.pdfPageIndex] && !renderingPages.has(slide.pdfPageIndex)) {
-            pagesToRender.push(slide.pdfPageIndex);
-          }
+        if (!renderedPages[slide.pdfPageIndex] && !renderingPages.has(slide.pdfPageIndex)) {
+          pagesToRender.push(slide.pdfPageIndex);
         }
       }
     });
 
-    // Sort by proximity to current slide
+    // Sort by proximity to current slide so nearest slides render first
     pagesToRender.sort((a, b) => {
       const currentPage = currentSlide?.pdfPageIndex ?? 0;
       return Math.abs(a - currentPage) - Math.abs(b - currentPage);
@@ -114,21 +108,9 @@ export default function SlideCanvas({ isPresenting = false }: SlideCanvasProps) 
       }
     };
 
-    // Garbage collection: clear rendered pages that are far from the current slide
-    const safeRadius = Math.max(10, settings.preloadSlides * 2);
-    const currentPageIndex = currentSlide?.pdfPageIndex ?? 0;
-    let purgedCount = 0;
-    Object.keys(renderedPages).forEach((key) => {
-      const pageIndex = Number(key);
-      if (Math.abs(pageIndex - currentPageIndex) > safeRadius) {
-        removeRenderedPage(pageIndex);
-        purgedCount++;
-      }
-    });
-    
-    if (purgedCount > 0) {
-      console.log(`[MemoryManager] Garbage collection purged ${purgedCount} off-screen slide(s) to free memory`);
-    }
+    // Note: Removed strict garbage collection to allow Slide Overview to show all thumbnails.
+    // The previous memory crash was caused by base64 conversion loops, not canvas rendering.
+    // Modern browsers can easily hold 100-200 slide images in memory natively.
 
     renderNext(0);
   }, [currentSession?.id, currentSlideIndex, settings.renderingQuality]);
