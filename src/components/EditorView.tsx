@@ -205,7 +205,8 @@ export default function EditorView() {
     setPointerPosition({ x: e.clientX, y: e.clientY });
 
     if (document.fullscreenElement) {
-      if (e.clientY < 60) {
+      const isOverSidePanel = isSidePanelOpen && e.clientX < 224;
+      if (e.clientY < 60 && !isOverSidePanel) {
         setIsHeaderVisible(true);
         if (headerHideTimer.current) clearTimeout(headerHideTimer.current);
         headerHideTimer.current = setTimeout(() => {
@@ -215,7 +216,7 @@ export default function EditorView() {
         }, settings.toolbarAutoHideDelay || 3000);
       }
     }
-  }, [setPointerPosition, settings.toolbarAutoHideDelay]);
+  }, [setPointerPosition, settings.toolbarAutoHideDelay, isSidePanelOpen]);
 
   useEffect(() => {
     window.addEventListener('mousemove', handleMouseMove);
