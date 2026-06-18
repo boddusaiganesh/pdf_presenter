@@ -154,7 +154,7 @@ export default function HomeScreen() {
       {/* Header */}
       <header className="border-b border-white/[0.06] px-8 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img src="/icon.png" alt="ApexPresenter Logo" className="w-9 h-9 rounded-xl shadow-lg shadow-indigo-500/20" />
+          <img src="./icon.png" alt="ApexPresenter Logo" className="w-9 h-9 rounded-xl shadow-lg shadow-indigo-500/20" />
           <div>
             <h1 className="text-white font-bold text-lg leading-none">ApexPresenter</h1>
             <p className="text-white/40 text-xs mt-0.5">Remote Edition</p>
@@ -271,7 +271,7 @@ export default function HomeScreen() {
           {sessions.length === 0 && (
             <div className="mb-8 rounded-2xl bg-gradient-to-br from-indigo-600/20 via-violet-600/10 to-transparent border border-indigo-500/20 p-8">
               <div className="flex items-start gap-6">
-                <img src="/icon.png" alt="ApexPresenter Logo" className="w-16 h-16 rounded-2xl shadow-lg shadow-indigo-500/30 shrink-0" />
+                <img src="./icon.png" alt="ApexPresenter Logo" className="w-16 h-16 rounded-2xl shadow-lg shadow-indigo-500/30 shrink-0" />
                 <div>
                   <h2 className="text-white text-2xl font-bold mb-2">Welcome to ApexPresenter</h2>
                   <p className="text-white/60 text-sm leading-relaxed max-w-2xl">

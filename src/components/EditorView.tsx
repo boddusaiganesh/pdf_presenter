@@ -254,7 +254,7 @@ export default function EditorView() {
       >
         {/* Logo */}
         <button onClick={() => setCurrentScreen('home')} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-          <img src="/icon.png" alt="ApexPresenter Logo" className="w-7 h-7 rounded-lg shadow-sm" />
+          <img src="./icon.png" alt="ApexPresenter Logo" className="w-7 h-7 rounded-lg shadow-sm" />
         </button>
 
         {/* Session Name */}

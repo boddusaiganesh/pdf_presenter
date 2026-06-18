@@ -65,7 +65,7 @@ export default function PreflightCheck() {
   const handleStartPresenting = () => {
     if (isSidePanelOpen) setIsSidePanelOpen(false);
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
+      document.documentElement.requestFullscreen().catch(() => { });
     }
     setIsPresenting(true);
     setCurrentScreen('presenting');
