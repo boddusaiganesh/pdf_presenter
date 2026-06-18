@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
-import { BookOpen, Bold, Italic, List, X } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { BookOpen, X } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { cn } from '../utils/cn';
 
 interface SpeakerNotePanelProps {
   onClose: () => void;
@@ -12,16 +11,19 @@ export default function SpeakerNotePanel({ onClose }: SpeakerNotePanelProps) {
   const slides = currentSession?.slides || [];
   const currentSlide = slides[currentSlideIndex];
   const [content, setContent] = useState(currentSlide?.note.content || '');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setContent(currentSlide?.note.content || '');
   }, [currentSlideIndex, currentSlide?.note.content]);
 
+  // Debounce note saves — prevents a Zustand state update + full re-render on every keystroke
   const handleChange = (value: string) => {
     setContent(value);
-    if (currentSlide) {
-      updateNote(currentSlide.id, value);
-    }
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      if (currentSlide) updateNote(currentSlide.id, value);
+    }, 300);
   };
 
   if (!currentSlide) return null;

@@ -31,14 +31,22 @@ export async function renderPage(
   const canvas = document.createElement('canvas');
   canvas.width = viewport.width;
   canvas.height = viewport.height;
+  const ctx = canvas.getContext('2d')!;
 
-  const ctx = canvas.getContext('2d');
-
-  if (contrastBoost && ctx) {
-    ctx.filter = `contrast(${100 + contrastStrength}%) brightness(${100 + contrastStrength * 0.3}%)`;
-  }
-
+  // Render PDF into canvas first (no filter during render)
   await page.render({ canvasContext: ctx, viewport }).promise;
+
+  // Apply contrast as a post-processing step on a second canvas
+  // This ensures PDF.js internal drawing is not affected by the filter
+  if (contrastBoost) {
+    const canvas2 = document.createElement('canvas');
+    canvas2.width = viewport.width;
+    canvas2.height = viewport.height;
+    const ctx2 = canvas2.getContext('2d')!;
+    ctx2.filter = `contrast(${100 + contrastStrength}%) brightness(${100 + contrastStrength * 0.3}%)`;
+    ctx2.drawImage(canvas, 0, 0);
+    return canvas2.toDataURL('image/jpeg', 0.92);
+  }
 
   return canvas.toDataURL('image/jpeg', 0.92);
 }
@@ -57,14 +65,21 @@ export async function renderPageToCanvas(
 
   canvas.width = viewport.width;
   canvas.height = viewport.height;
-
-  const ctx = canvas.getContext('2d');
-
-  if (contrastBoost && ctx) {
-    ctx.filter = `contrast(${100 + contrastStrength}%) brightness(${100 + contrastStrength * 0.3}%)`;
-  }
+  const ctx = canvas.getContext('2d')!;
 
   await page.render({ canvasContext: ctx, viewport }).promise;
+
+  // Post-process contrast on the same canvas
+  if (contrastBoost) {
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = viewport.width;
+    tempCanvas.height = viewport.height;
+    const tempCtx = tempCanvas.getContext('2d')!;
+    tempCtx.filter = `contrast(${100 + contrastStrength}%) brightness(${100 + contrastStrength * 0.3}%)`;
+    tempCtx.drawImage(canvas, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(tempCanvas, 0, 0);
+  }
 
   return { width: viewport.width, height: viewport.height };
 }

@@ -13,14 +13,14 @@ export default function PointerOverlay() {
   const { pointerMode, pointerPosition, settings } = useStore();
   const [trails, setTrails] = useState<Trail[]>([]);
   const trailIdRef = useRef(0);
-  const trailTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const trailLengths = { short: 5, medium: 10, long: 18 };
   const maxTrails = trailLengths[settings.laserTrailLength];
 
   useEffect(() => {
+    // Performance guard: skip all trail work when not in laser mode
     if (pointerMode !== 'laser' || !settings.laserTrail) {
-      setTrails([]);
+      if (trails.length > 0) setTrails([]);
       return;
     }
 
@@ -38,7 +38,7 @@ export default function PointerOverlay() {
       }));
       return updated;
     });
-  }, [pointerPosition, pointerMode, settings.laserTrail, settings.laserTrailLength, maxTrails]);
+  }, [pointerPosition, pointerMode, settings.laserTrail, settings.laserTrailLength, maxTrails]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (pointerMode === 'normal') return null;
 
@@ -67,7 +67,6 @@ export default function PointerOverlay() {
             }}
           />
         ))}
-
         {/* Main dot */}
         <div
           className="fixed rounded-full"
@@ -78,14 +77,9 @@ export default function PointerOverlay() {
             height: laserSize,
             transform: 'translate(-50%, -50%)',
             background: laserColor,
-            boxShadow: `
-              0 0 ${4 * glowIntensity}px ${2 * glowIntensity}px ${laserColor}cc,
-              0 0 ${10 * glowIntensity}px ${5 * glowIntensity}px ${laserColor}66,
-              0 0 ${20 * glowIntensity}px ${8 * glowIntensity}px ${laserColor}33
-            `,
+            boxShadow: `0 0 ${4 * glowIntensity}px ${2 * glowIntensity}px ${laserColor}cc, 0 0 ${10 * glowIntensity}px ${5 * glowIntensity}px ${laserColor}66, 0 0 ${20 * glowIntensity}px ${8 * glowIntensity}px ${laserColor}33`,
           }}
         />
-
         {/* Pulse ring */}
         <div
           className="fixed rounded-full animate-ping"
@@ -109,12 +103,8 @@ export default function PointerOverlay() {
     const dim = settings.spotlightDimLevel / 100;
     const dimColor = settings.spotlightDimColor;
     const softEdge = settings.spotlightSoftEdge;
-
     return (
-      <div
-        className="pointer-events-none fixed inset-0 z-[9990]"
-        style={{ cursor: 'none' }}
-      >
+      <div className="pointer-events-none fixed inset-0 z-[9990]" style={{ cursor: 'none' }}>
         <svg width="100%" height="100%" className="fixed inset-0">
           <defs>
             <radialGradient id="spotlight-grad" cx="50%" cy="50%" r="50%">
@@ -135,36 +125,16 @@ export default function PointerOverlay() {
             <mask id="spotlight-mask">
               <rect width="100%" height="100%" fill="white" />
               {settings.spotlightShape === 'rectangle' ? (
-                <rect
-                  x={x - size}
-                  y={y - size * 0.6}
-                  width={size * 2}
-                  height={size * 1.2}
-                  rx="8"
-                  fill="black"
-                />
+                <rect x={x - size} y={y - size * 0.6} width={size * 2} height={size * 1.2} rx="8" fill="black" />
               ) : (
-                <ellipse
-                  cx={x}
-                  cy={y}
-                  rx={size / 2}
-                  ry={settings.spotlightShape === 'oval' ? size * 0.35 : size / 2}
-                  fill="black"
-                />
+                <ellipse cx={x} cy={y} rx={size / 2} ry={settings.spotlightShape === 'oval' ? size * 0.35 : size / 2} fill="black" />
               )}
             </mask>
           </defs>
-          <rect
-            width="100%"
-            height="100%"
-            fill={dimColor}
-            fillOpacity={dim}
-            mask="url(#spotlight-mask)"
-          />
+          <rect width="100%" height="100%" fill={dimColor} fillOpacity={dim} mask="url(#spotlight-mask)" />
           {softEdge && (
             <ellipse
-              cx={x}
-              cy={y}
+              cx={x} cy={y}
               rx={size / 2}
               ry={settings.spotlightShape === 'oval' ? size * 0.35 : size / 2}
               fill="url(#spotlight-grad)"
@@ -180,30 +150,16 @@ export default function PointerOverlay() {
     const size = settings.spotlightSize;
     const dim = settings.spotlightDimLevel / 100;
     const dimColor = settings.spotlightDimColor;
-
     return (
       <div className="pointer-events-none fixed inset-0 z-[9990]" style={{ cursor: 'none' }}>
         <svg width="100%" height="100%" className="fixed inset-0">
           <defs>
             <mask id="squarelight-mask">
               <rect width="100%" height="100%" fill="white" />
-              <rect
-                x={x - size}
-                y={y - size * 0.4}
-                width={size * 2}
-                height={size * 0.8}
-                rx="4"
-                fill="black"
-              />
+              <rect x={x - size} y={y - size * 0.4} width={size * 2} height={size * 0.8} rx="4" fill="black" />
             </mask>
           </defs>
-          <rect
-            width="100%"
-            height="100%"
-            fill={dimColor}
-            fillOpacity={dim}
-            mask="url(#squarelight-mask)"
-          />
+          <rect width="100%" height="100%" fill={dimColor} fillOpacity={dim} mask="url(#squarelight-mask)" />
         </svg>
       </div>
     );
@@ -216,23 +172,14 @@ export default function PointerOverlay() {
         <div
           className="fixed rounded-full border-4 border-white/80 shadow-2xl overflow-hidden"
           style={{
-            left: x - magSize / 2,
-            top: y - magSize / 2,
-            width: magSize,
-            height: magSize,
+            left: x - magSize / 2, top: y - magSize / 2,
+            width: magSize, height: magSize,
             background: 'rgba(255,255,255,0.1)',
-            backdropFilter: 'blur(0px)',
             boxShadow: '0 0 0 2px rgba(0,0,0,0.3), 0 20px 60px rgba(0,0,0,0.5)',
           }}
         />
-        <div
-          className="fixed w-0.5 h-4 bg-white/60"
-          style={{ left: x, top: y - 2, transform: 'translate(-50%, -50%)' }}
-        />
-        <div
-          className="fixed w-4 h-0.5 bg-white/60"
-          style={{ left: x - 2, top: y, transform: 'translate(-50%, -50%)' }}
-        />
+        <div className="fixed w-0.5 h-4 bg-white/60" style={{ left: x, top: y - 2, transform: 'translate(-50%, -50%)' }} />
+        <div className="fixed w-4 h-0.5 bg-white/60" style={{ left: x - 2, top: y, transform: 'translate(-50%, -50%)' }} />
       </div>
     );
   }
@@ -240,36 +187,9 @@ export default function PointerOverlay() {
   if (pointerMode === 'crosshair') {
     return (
       <div className="pointer-events-none fixed inset-0 z-[9999]" style={{ cursor: 'none' }}>
-        <div
-          className="fixed bg-red-500"
-          style={{
-            left: x,
-            top: 0,
-            width: 1,
-            height: '100%',
-            opacity: 0.6,
-            transform: 'translateX(-50%)',
-          }}
-        />
-        <div
-          className="fixed bg-red-500"
-          style={{
-            left: 0,
-            top: y,
-            width: '100%',
-            height: 1,
-            opacity: 0.6,
-            transform: 'translateY(-50%)',
-          }}
-        />
-        <div
-          className="fixed w-4 h-4 rounded-full border-2 border-red-500"
-          style={{
-            left: x,
-            top: y,
-            transform: 'translate(-50%, -50%)',
-          }}
-        />
+        <div className="fixed bg-red-500" style={{ left: x, top: 0, width: 1, height: '100%', opacity: 0.6, transform: 'translateX(-50%)' }} />
+        <div className="fixed bg-red-500" style={{ left: 0, top: y, width: '100%', height: 1, opacity: 0.6, transform: 'translateY(-50%)' }} />
+        <div className="fixed w-4 h-4 rounded-full border-2 border-red-500" style={{ left: x, top: y, transform: 'translate(-50%, -50%)' }} />
       </div>
     );
   }
