@@ -40,6 +40,11 @@ export default function EditorView() {
   const [toolbarHideTimer, setToolbarHideTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   const isMouseNearToolbar = useRef(false);
 
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const headerHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isMouseNearHeader = useRef(false);
+
   const slides = currentSession?.slides || [];
 
   // Auto-save
@@ -169,6 +174,20 @@ export default function EditorView() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isFull = !!document.fullscreenElement;
+      setIsFullscreen(isFull);
+      if (isFull) {
+        setIsHeaderVisible(false);
+      } else {
+        setIsHeaderVisible(true);
+      }
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
   const toggleFullScreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch((err) => {
@@ -184,7 +203,19 @@ export default function EditorView() {
   // Track mouse position for pointer
   const handleMouseMove = useCallback((e: MouseEvent) => {
     setPointerPosition({ x: e.clientX, y: e.clientY });
-  }, [setPointerPosition]);
+
+    if (document.fullscreenElement) {
+      if (e.clientY < 60) {
+        setIsHeaderVisible(true);
+        if (headerHideTimer.current) clearTimeout(headerHideTimer.current);
+        headerHideTimer.current = setTimeout(() => {
+          if (!isMouseNearHeader.current) {
+            setIsHeaderVisible(false);
+          }
+        }, settings.toolbarAutoHideDelay || 3000);
+      }
+    }
+  }, [setPointerPosition, settings.toolbarAutoHideDelay]);
 
   useEffect(() => {
     window.addEventListener('mousemove', handleMouseMove);
@@ -221,9 +252,23 @@ export default function EditorView() {
   }
 
   return (
-    <div className="h-screen bg-[#0f1117] flex flex-col overflow-hidden">
+    <div className="h-screen bg-[#0f1117] flex flex-col overflow-hidden relative">
       {/* Top Header Bar */}
-      <header className="h-12 border-b border-white/[0.06] flex items-center px-4 gap-3 shrink-0 z-30 relative">
+      <header 
+        className={cn(
+          "border-b border-white/[0.06] flex items-center px-4 gap-3 shrink-0 z-50 transition-all duration-300",
+          isFullscreen ? "absolute top-0 left-0 right-0 bg-[#0f1117]" : "relative",
+          isFullscreen ? (isHeaderVisible ? "translate-y-0 opacity-100 h-12" : "-translate-y-full opacity-0 h-12") : "translate-y-0 opacity-100 h-12"
+        )}
+        onMouseEnter={() => { isMouseNearHeader.current = true; setIsHeaderVisible(true); }}
+        onMouseLeave={() => {
+          isMouseNearHeader.current = false;
+          if (isFullscreen) {
+            if (headerHideTimer.current) clearTimeout(headerHideTimer.current);
+            headerHideTimer.current = setTimeout(() => setIsHeaderVisible(false), settings.toolbarAutoHideDelay || 3000);
+          }
+        }}
+      >
         {/* Logo */}
         <button
           onClick={() => setCurrentScreen('home')}
