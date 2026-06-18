@@ -15,7 +15,7 @@ export default function HomeScreen() {
   const {
     sessions, createSession, loadSession, deleteSession,
     setCurrentScreen, importSession, settings, setShowSettings,
-    clearRenderedPages, addRenderedPage
+    clearRenderedPages, addRenderedPage, updateSession
   } = useStore();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -56,6 +56,9 @@ export default function HomeScreen() {
         try {
           const dataURL = await renderPage(i, settings.renderingQuality, settings.compressionContrastBoost, settings.contrastBoostStrength);
           addRenderedPage(i, dataURL);
+          if (i === 0) {
+            updateSession({ thumbnail: dataURL });
+          }
           setLoadingProgress(10 + (i + 1) * (80 / preloadCount));
         } catch (e) {
           console.error('Error rendering page', i, e);
