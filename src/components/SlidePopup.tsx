@@ -246,7 +246,7 @@ export default function SlidePopup({ slideId, popup, index }: SlidePopupProps) {
       <div
         className="flex-1 overflow-hidden relative pointer-events-auto bg-black rounded-b-xl"
         onWheel={(e) => {
-          if (!hasContent) return;
+          if (!hasContent) return; // let native scroll work on the slide-picker grid
           e.stopPropagation();
           if (e.ctrlKey || e.metaKey) {
             const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
@@ -325,13 +325,15 @@ export default function SlidePopup({ slideId, popup, index }: SlidePopupProps) {
           ) : null}
         </div>
 
-        {/* Annotation Layer */}
-        <AnnotationCanvas 
-          width={localRect.width} 
-          height={localRect.height - 32} 
-          slideId={slideId} 
-          popupId={popup.id} 
-        />
+        {/* Annotation Layer — only when there is content to annotate */}
+        {hasContent && (
+          <AnnotationCanvas 
+            width={localRect.width} 
+            height={localRect.height - 32} 
+            slideId={slideId} 
+            popupId={popup.id} 
+          />
+        )}
 
         {hasContent && (
           <div 

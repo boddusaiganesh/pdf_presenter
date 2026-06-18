@@ -311,28 +311,6 @@ export default function EditorView() {
             Add Slide
           </button>
 
-          <button
-            onClick={() => {
-              saveCurrentSession();
-              exportSessionFile(currentSession);
-              toast.success('Session exported as .pdfpro file');
-            }}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-white/50 hover:text-white hover:bg-white/[0.06] transition-all"
-          >
-            <Download className="w-3.5 h-3.5" />
-            Export
-          </button>
-
-          <button
-            onClick={() => {
-              saveCurrentSession();
-              toast.success('Saved!', { duration: 1200 });
-            }}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-white/50 hover:text-white hover:bg-white/[0.06] transition-all"
-          >
-            <Save className="w-3.5 h-3.5" />
-            Save
-          </button>
 
           <div className="w-px h-5 bg-white/[0.08] mx-1" />
 
