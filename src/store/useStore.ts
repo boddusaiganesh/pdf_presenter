@@ -315,7 +315,7 @@ interface AppStore {
 
   // ── PDF Rendering ──
   renderedPages: Record<number, string>; // pageIndex -> dataURL
-  renderingPages: Set<number>;
+  renderingPages: number[];
   addRenderedPage: (pageIndex: number, dataURL: string) => void;
   removeRenderedPage: (pageIndex: number) => void;
   addRenderingPage: (pageIndex: number) => void;
@@ -440,12 +440,23 @@ export const useStore = create<AppStore>()(
       setCurrentSlideIndex: (index) => {
         const { currentSession, timer, recordSlideTime } = get();
         if (!currentSession) return;
-        const maxIndex = currentSession.slides.filter((s) => !s.hidden).length - 1;
-        const clampedIndex = Math.max(0, Math.min(index, maxIndex));
-        const visibleSlides = currentSession.slides.filter((s) => !s.hidden);
-        const currentSlide = visibleSlides[get().currentSlideIndex];
+        const slides = currentSession.slides;
+        const clampedIndex = Math.max(0, Math.min(index, slides.length - 1));
+
+        // Skip hidden slides — find next visible in the direction of travel
+        const direction = index >= get().currentSlideIndex ? 1 : -1;
+        let finalIndex = clampedIndex;
+        if (slides[clampedIndex]?.hidden) {
+          let search = clampedIndex + direction;
+          while (search >= 0 && search < slides.length) {
+            if (!slides[search].hidden) { finalIndex = search; break; }
+            search += direction;
+          }
+        }
+
+        const currentSlide = slides[get().currentSlideIndex];
         if (currentSlide && timer.running) recordSlideTime(currentSlide.id);
-        set({ currentSlideIndex: clampedIndex });
+        set({ currentSlideIndex: finalIndex });
       },
 
       addSlide: (slide, afterIndex) => {
@@ -836,7 +847,7 @@ export const useStore = create<AppStore>()(
 
       // ── PDF Rendering ──
       renderedPages: {},
-      renderingPages: new Set(),
+      renderingPages: [],
       addRenderedPage: (pageIndex, dataURL) =>
         set((s) => ({ renderedPages: { ...s.renderedPages, [pageIndex]: dataURL } })),
       removeRenderedPage: (pageIndex) =>
@@ -846,18 +857,14 @@ export const useStore = create<AppStore>()(
           return { renderedPages: next };
         }),
       addRenderingPage: (pageIndex) =>
-        set((s) => {
-          const next = new Set(s.renderingPages);
-          next.add(pageIndex);
-          return { renderingPages: next };
-        }),
+        set((s) => ({
+          renderingPages: s.renderingPages.includes(pageIndex)
+            ? s.renderingPages
+            : [...s.renderingPages, pageIndex],
+        })),
       removeRenderingPage: (pageIndex) =>
-        set((s) => {
-          const next = new Set(s.renderingPages);
-          next.delete(pageIndex);
-          return { renderingPages: next };
-        }),
-      clearRenderedPages: () => set({ renderedPages: {}, renderingPages: new Set() }),
+        set((s) => ({ renderingPages: s.renderingPages.filter((p) => p !== pageIndex) })),
+      clearRenderedPages: () => set({ renderedPages: {}, renderingPages: [] }),
 
       // ── Misc ──
       showSettings: false,

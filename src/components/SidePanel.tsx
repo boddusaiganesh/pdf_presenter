@@ -79,42 +79,28 @@ function SlideThumbnail({
       onDrop={(e) => { setIsDragOver(false); onDrop(e, index); }}
       onContextMenu={(e) => onContextMenu(e, index)}
     >
-      {/* Drag Handle */}
       <div className="absolute left-0 top-0 bottom-0 w-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all z-10 cursor-grab active:cursor-grabbing">
         <GripVertical className="w-3 h-3 text-white/40" />
       </div>
-
-      {/* Tools Menu Button (3 dots) */}
       <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onContextMenu(e, index);
-          }}
+          onClick={(e) => { e.stopPropagation(); onContextMenu(e, index); }}
           className="p-1 rounded-md bg-black/60 hover:bg-black/90 text-white/80 hover:text-white backdrop-blur shadow-sm transition-all"
           title="Slide Options"
         >
           <MoreHorizontal className="w-4 h-4" />
         </button>
       </div>
-
-      {/* Thumbnail */}
       <div className="aspect-video bg-slate-900 rounded-lg overflow-hidden">
         {getSlidePreview()}
       </div>
-
-      {/* Slide Number & Badges */}
       <div className="flex items-center justify-between mt-1.5 px-0.5">
         <span className={cn('text-xs font-mono', isActive ? 'text-indigo-400' : 'text-white/30')}>
           {String(slideNumber).padStart(2, '0')}
         </span>
         <div className="flex items-center gap-1">
-          {slide.annotation.fabricJSON && (
-            <div className="w-1.5 h-1.5 rounded-full bg-amber-400" title="Has annotations" />
-          )}
-          {slide.note.content && (
-            <div className="w-1.5 h-1.5 rounded-full bg-blue-400" title="Has notes" />
-          )}
+          {slide.annotation.fabricJSON && <div className="w-1.5 h-1.5 rounded-full bg-amber-400" title="Has annotations" />}
+          {slide.note.content && <div className="w-1.5 h-1.5 rounded-full bg-blue-400" title="Has notes" />}
           {slide.hidden && <EyeOff className="w-3 h-3 text-white/30" />}
         </div>
       </div>
@@ -122,7 +108,7 @@ function SlideThumbnail({
   );
 }
 
-// ─── Context Menu ──────────────────────────────────────────────────────────────
+// ── Context Menu ──────────────────────────────────────────────────────────────────────────────
 
 interface ContextMenuProps {
   x: number;
@@ -133,100 +119,97 @@ interface ContextMenuProps {
 }
 
 function ContextMenu({ x, y, slideIndex, slide, onClose }: ContextMenuProps) {
-  const {
-    toggleHideSlide, removeSlide, duplicateSlide,
-    addSlide, openMediaPanel
-  } = useStore();
+  const { toggleHideSlide, removeSlide, duplicateSlide, addSlide, openMediaPanel } = useStore();
 
-  const menuRef = useRef<HTMLDivElement>(null);
+  // Two-step delete confirm — no window.confirm
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleDelete = () => {
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      confirmTimerRef.current = setTimeout(() => setConfirmDelete(false), 3000);
+    } else {
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+      removeSlide(slideIndex);
+      toast.success('Slide deleted');
+      onClose();
+    }
+  };
 
   const handleAction = (action: () => void) => {
     action();
     onClose();
   };
 
-  const menuItems = [
-    {
-      label: slide.hidden ? 'Show Slide' : 'Hide Slide',
-      icon: slide.hidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />,
-      action: () => toggleHideSlide(slideIndex),
-    },
-    {
-      label: 'Duplicate',
-      icon: <Copy className="w-3.5 h-3.5" />,
-      action: () => duplicateSlide(slideIndex),
-    },
-    { separator: true },
-    {
-      label: 'Insert Blank White Slide',
-      icon: <Layout className="w-3.5 h-3.5" />,
-      action: () => addSlide({ type: 'blank-white' }, slideIndex),
-    },
-    {
-      label: 'Insert Blank Black Slide',
-      icon: <Layout className="w-3.5 h-3.5" />,
-      action: () => addSlide({ type: 'blank-black' }, slideIndex),
-    },
-    { separator: true },
-    {
-      label: 'Insert Media / Image',
-      icon: <Image className="w-3.5 h-3.5" />,
-      action: () => openMediaPanel(slideIndex),
-    },
-    {
-      label: 'Insert Video',
-      icon: <Film className="w-3.5 h-3.5" />,
-      action: () => openMediaPanel(slideIndex),
-    },
-    { separator: true },
-    {
-      label: 'Delete Slide',
-      icon: <Trash2 className="w-3.5 h-3.5" />,
-      action: () => {
-        if (window.confirm('Delete this slide?')) {
-          removeSlide(slideIndex);
-          toast.success('Slide deleted');
-        }
-      },
-      danger: true,
-    },
-  ];
-
   return (
     <>
       <div className="fixed inset-0 z-[999]" onClick={onClose} />
       <div
-        ref={menuRef}
         className="fixed z-[1000] glass rounded-xl shadow-2xl shadow-black/50 py-1 w-52 animate-fade-in"
         style={{
           left: Math.min(x, window.innerWidth - 220),
-          top: Math.min(y, window.innerHeight - 300),
+          top: Math.min(y, window.innerHeight - 320),
         }}
       >
-        {menuItems.map((item, i) => {
-          if ('separator' in item) return <div key={i} className="my-1 border-t border-white/[0.06]" />;
-          return (
-            <button
-              key={item.label}
-              className={cn(
-                'w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors',
-                item.danger
-                  ? 'text-red-400 hover:bg-red-500/10'
-                  : 'text-white/70 hover:text-white hover:bg-white/[0.05]'
-              )}
-              onClick={() => handleAction(item.action)}
-            >
-              {item.icon}
-              {item.label}
-            </button>
-          );
-        })}
+        <button
+          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/[0.05] transition-colors"
+          onClick={() => handleAction(() => toggleHideSlide(slideIndex))}
+        >
+          {slide.hidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+          {slide.hidden ? 'Show Slide' : 'Hide Slide'}
+        </button>
+        <button
+          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/[0.05] transition-colors"
+          onClick={() => handleAction(() => duplicateSlide(slideIndex))}
+        >
+          <Copy className="w-3.5 h-3.5" /> Duplicate
+        </button>
+        <div className="my-1 border-t border-white/[0.06]" />
+        <button
+          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/[0.05] transition-colors"
+          onClick={() => handleAction(() => addSlide({ type: 'blank-white' }, slideIndex))}
+        >
+          <Layout className="w-3.5 h-3.5" /> Insert Blank White Slide
+        </button>
+        <button
+          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/[0.05] transition-colors"
+          onClick={() => handleAction(() => addSlide({ type: 'blank-black' }, slideIndex))}
+        >
+          <Layout className="w-3.5 h-3.5" /> Insert Blank Black Slide
+        </button>
+        <div className="my-1 border-t border-white/[0.06]" />
+        <button
+          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/[0.05] transition-colors"
+          onClick={() => handleAction(() => openMediaPanel(slideIndex))}
+        >
+          <Image className="w-3.5 h-3.5" /> Insert Media / Image
+        </button>
+        <button
+          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/[0.05] transition-colors"
+          onClick={() => handleAction(() => openMediaPanel(slideIndex))}
+        >
+          <Film className="w-3.5 h-3.5" /> Insert Video
+        </button>
+        <div className="my-1 border-t border-white/[0.06]" />
+        <button
+          className={cn(
+            'w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors',
+            confirmDelete
+              ? 'text-red-300 bg-red-500/15 hover:bg-red-500/25'
+              : 'text-red-400 hover:bg-red-500/10'
+          )}
+          onClick={handleDelete}
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+          {confirmDelete ? 'Confirm Delete?' : 'Delete Slide'}
+        </button>
       </div>
     </>
   );
 }
 
-// ─── Main Side Panel ───────────────────────────────────────────────────────────
+// ── Main Side Panel ─────────────────────────────────────────────────────────────────────────────
 
 export default function SidePanel() {
   const {
@@ -240,7 +223,6 @@ export default function SidePanel() {
   const [showAddMenu, setShowAddMenu] = useState(false);
 
   const slides = currentSession?.slides || [];
-  const visibleSlides = slides;
   let displayNumber = 0;
 
   const handleDragStart = (e: React.DragEvent, index: number) => {
@@ -335,7 +317,7 @@ export default function SidePanel() {
 
         {/* Slides List */}
         <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
-          {visibleSlides.map((slide, index) => {
+          {slides.map((slide, index) => {
             if (!slide.hidden) displayNumber++;
             const isActive = index === currentSlideIndex;
             return (
@@ -346,9 +328,7 @@ export default function SidePanel() {
                 isActive={isActive}
                 slideNumber={slide.hidden ? index + 1 : displayNumber}
                 renderedPages={renderedPages}
-                onSelect={() => {
-                  setCurrentSlideIndex(index);
-                }}
+                onSelect={() => setCurrentSlideIndex(index)}
                 onDragStart={handleDragStart}
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
@@ -356,7 +336,6 @@ export default function SidePanel() {
               />
             );
           })}
-
           {slides.length === 0 && (
             <div className="flex flex-col items-center justify-center h-32 text-center px-2">
               <AlignJustify className="w-8 h-8 text-white/10 mb-2" />

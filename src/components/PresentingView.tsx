@@ -17,7 +17,6 @@ export default function PresentingView() {
     isFrozen, setIsFrozen,
     isOverviewMode, setIsOverviewMode,
     zoomLevel, setZoomLevel,
-    timer, tickTimer,
     settings, showSettings,
     clearSlideAnnotation, clearAllAnnotations,
   } = useStore();
@@ -25,15 +24,16 @@ export default function PresentingView() {
   const toolbarTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isNearToolbarRef = useRef(false);
 
+  // Use a ref for the auto-hide delay so handleMouseMove doesn't need to
+  // be recreated every time settings change (avoids re-adding mousemove listener)
+  const autoHideDelayRef = useRef(settings.toolbarAutoHideDelay);
+  useEffect(() => {
+    autoHideDelayRef.current = settings.toolbarAutoHideDelay;
+  }, [settings.toolbarAutoHideDelay]);
+
   const slides = currentSession?.slides || [];
 
-  // Timer tick
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (timer.running) tickTimer();
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [timer.running, tickTimer]);
+  // NOTE: Timer tick is handled globally in App.tsx — no duplicate interval here
 
   // Keyboard shortcuts
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -103,14 +103,13 @@ export default function PresentingView() {
       case 'd':
         if (ctrl && e.shiftKey) {
           e.preventDefault();
-          if (window.confirm('Clear all annotations?')) clearAllAnnotations();
+          clearAllAnnotations(); // No window.confirm
         } else if (ctrl) {
           e.preventDefault();
           const slide = slides[currentSlideIndex];
           if (slide) clearSlideAnnotation(slide.id);
         }
         break;
-      // ctrl+p handled separately above to avoid duplicate case
       case '+':
       case '=':
         if (ctrl) { e.preventDefault(); setZoomLevel(zoomLevel + 0.25); }
@@ -130,11 +129,11 @@ export default function PresentingView() {
     }
   }, [
     currentSlideIndex, slides, isBlackScreen, isFrozen,
-    pointerMode, isSidePanelOpen, isOverviewMode, zoomLevel, currentTool,
+    pointerMode, isOverviewMode, zoomLevel, currentTool,
     setCurrentSlideIndex, setIsBlackScreen, setIsFrozen,
     setPointerMode, setCurrentTool, setIsOverviewMode,
     setIsSidePanelOpen, setZoomLevel,
-    clearSlideAnnotation, clearAllAnnotations
+    clearSlideAnnotation, clearAllAnnotations,
   ]);
 
   useEffect(() => {
@@ -142,22 +141,21 @@ export default function PresentingView() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  // Mouse tracking
+  // Mouse tracking — stable callback, reads delay from ref
   const handleMouseMove = useCallback((e: MouseEvent) => {
     setPointerPosition({ x: e.clientX, y: e.clientY });
-
-    // Auto-show toolbar when near bottom
     const distFromBottom = window.innerHeight - e.clientY;
     if (distFromBottom < 100) {
       setIsToolbarVisible(true);
       if (toolbarTimerRef.current) clearTimeout(toolbarTimerRef.current);
       if (!isNearToolbarRef.current) {
-        toolbarTimerRef.current = setTimeout(() => {
-          setIsToolbarVisible(false);
-        }, settings.toolbarAutoHideDelay);
+        toolbarTimerRef.current = setTimeout(
+          () => setIsToolbarVisible(false),
+          autoHideDelayRef.current
+        );
       }
     }
-  }, [setPointerPosition, setIsToolbarVisible, settings.toolbarAutoHideDelay]);
+  }, [setPointerPosition, setIsToolbarVisible]);
 
   useEffect(() => {
     window.addEventListener('mousemove', handleMouseMove);
@@ -174,16 +172,18 @@ export default function PresentingView() {
   }, [settings.autoAdvanceSeconds, currentSlideIndex, setCurrentSlideIndex]);
 
   return (
-    <div className="h-screen w-screen bg-black overflow-hidden relative" style={{ cursor: pointerMode !== 'normal' ? 'none' : 'default' }}>
-      {/* Slide Canvas (takes full screen) */}
+    <div
+      className="h-screen w-screen bg-black overflow-hidden relative"
+      style={{ cursor: pointerMode !== 'normal' ? 'none' : 'default' }}
+    >
+      {/* Slide Canvas */}
       <div className="absolute inset-0">
         <SlideCanvas isPresenting />
       </div>
 
-      {/* Pointer overlay — sits above slide, below toolbar */}
       <PointerOverlay />
 
-      {/* Floating Toolbar — centered at bottom, auto-hides */}
+      {/* Floating Toolbar */}
       <div
         className={cn(
           'absolute z-50 transition-all duration-300',
@@ -199,15 +199,15 @@ export default function PresentingView() {
         }}
         onMouseLeave={() => {
           isNearToolbarRef.current = false;
-          toolbarTimerRef.current = setTimeout(() => {
-            setIsToolbarVisible(false);
-          }, settings.toolbarAutoHideDelay);
+          toolbarTimerRef.current = setTimeout(
+            () => setIsToolbarVisible(false),
+            autoHideDelayRef.current
+          );
         }}
       >
         <FloatingToolbar />
       </div>
 
-      {/* Settings */}
       {showSettings && <SettingsPanel />}
     </div>
   );

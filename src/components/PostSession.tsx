@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Download, FileText, Image, Clock, BarChart2,
   MessageSquare, Share2, Home, ArrowRight, Check, Layers
@@ -17,10 +17,12 @@ export default function PostSession() {
 
   const [exported, setExported] = useState<Record<string, boolean>>({});
 
-  if (!currentSession) {
-    setCurrentScreen('home');
-    return null;
-  }
+  // Fix: never call setState during render — use useEffect instead
+  useEffect(() => {
+    if (!currentSession) setCurrentScreen('home');
+  }, [currentSession, setCurrentScreen]);
+
+  if (!currentSession) return null;
 
   const stats = postSessionStats || {
     slideTimings: timer.slideTimings,
@@ -106,10 +108,7 @@ export default function PostSession() {
           <p className="text-white/40 text-sm mt-0.5">{currentSession.name} · {format(new Date(), 'MMMM d, yyyy h:mm a')}</p>
         </div>
         <button
-          onClick={() => {
-            setIsPresenting(false);
-            setCurrentScreen('home');
-          }}
+          onClick={() => { setIsPresenting(false); setCurrentScreen('home'); }}
           className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.08] text-white/70 hover:text-white text-sm transition-all"
         >
           <Home className="w-4 h-4" />
@@ -227,10 +226,7 @@ export default function PostSession() {
             <ArrowRight className="w-4 h-4 text-indigo-400/30 group-hover:text-indigo-400 transition-colors" />
           </button>
           <button
-            onClick={() => {
-              setIsPresenting(false);
-              setCurrentScreen('home');
-            }}
+            onClick={() => { setIsPresenting(false); setCurrentScreen('home'); }}
             className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/[0.07] hover:bg-white/[0.05] hover:border-white/[0.12] transition-all text-left group"
           >
             <div>

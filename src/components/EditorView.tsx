@@ -29,7 +29,7 @@ export default function EditorView() {
     isFrozen, setIsFrozen,
     isOverviewMode, setIsOverviewMode,
     zoomLevel, setZoomLevel,
-    timer, tickTimer, startTimer, pauseTimer, resetTimer,
+    timer, startTimer, pauseTimer, resetTimer,
     lastAutoSave, setLastAutoSave,
     clearSlideAnnotation, clearAllAnnotations,
     setPreflightCheck,
@@ -37,7 +37,8 @@ export default function EditorView() {
   } = useStore();
 
   const [showNotePanel, setShowNotePanel] = useState(false);
-  const [toolbarHideTimer, setToolbarHideTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  // Use useRef instead of useState to avoid re-renders on every timer set/clear
+  const toolbarHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMouseNearToolbar = useRef(false);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -47,7 +48,7 @@ export default function EditorView() {
 
   const slides = currentSession?.slides || [];
 
-  // Auto-save
+  // Auto-save (timer tick is now in App.tsx — no duplicate interval here)
   useEffect(() => {
     if (settings.autoSaveInterval <= 0) return;
     const interval = setInterval(() => {
@@ -56,14 +57,6 @@ export default function EditorView() {
     }, settings.autoSaveInterval * 1000);
     return () => clearInterval(interval);
   }, [settings.autoSaveInterval, saveCurrentSession]);
-
-  // Timer tick
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (timer.running) tickTimer();
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [timer.running, tickTimer]);
 
   // Keyboard shortcuts
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -134,15 +127,13 @@ export default function EditorView() {
       case 'D':
         if (ctrl && e.shiftKey) {
           e.preventDefault();
-          if (window.confirm('Clear all annotations from all slides?')) clearAllAnnotations();
+          clearAllAnnotations(); // No window.confirm — use toolbar two-step confirm instead
         } else if (ctrl) {
           e.preventDefault();
           const slide = slides[currentSlideIndex];
           if (slide) clearSlideAnnotation(slide.id);
         }
         break;
-      // Note: 's' and 'p' with ctrl are handled in the default logic
-      // below via additional checks to avoid duplicate case warnings
       case '+':
       case '=':
         if (ctrl) { e.preventDefault(); setZoomLevel(zoomLevel + 0.25); }
@@ -162,10 +153,10 @@ export default function EditorView() {
     }
   }, [
     currentSlideIndex, slides, isBlackScreen, isFrozen,
-    pointerMode, isSidePanelOpen, isOverviewMode, zoomLevel,
+    pointerMode, isOverviewMode, zoomLevel,
     setCurrentSlideIndex, setIsBlackScreen, setIsFrozen,
     setPointerMode, setCurrentTool, setIsOverviewMode,
-    setIsSidePanelOpen, setZoomLevel, saveCurrentSession,
+    setZoomLevel, saveCurrentSession,
     clearSlideAnnotation, clearAllAnnotations
   ]);
 
@@ -178,11 +169,7 @@ export default function EditorView() {
     const handleFullscreenChange = () => {
       const isFull = !!document.fullscreenElement;
       setIsFullscreen(isFull);
-      if (isFull) {
-        setIsHeaderVisible(false);
-      } else {
-        setIsHeaderVisible(true);
-      }
+      setIsHeaderVisible(!isFull);
     };
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
@@ -194,13 +181,11 @@ export default function EditorView() {
         console.error(`Error attempting to enable fullscreen: ${err.message}`);
       });
     } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-      }
+      document.exitFullscreen?.();
     }
   };
 
-  // Track mouse position for pointer
+  // Track mouse position for pointer overlay
   const handleMouseMove = useCallback((e: MouseEvent) => {
     setPointerPosition({ x: e.clientX, y: e.clientY });
 
@@ -210,9 +195,7 @@ export default function EditorView() {
         setIsHeaderVisible(true);
         if (headerHideTimer.current) clearTimeout(headerHideTimer.current);
         headerHideTimer.current = setTimeout(() => {
-          if (!isMouseNearHeader.current) {
-            setIsHeaderVisible(false);
-          }
+          if (!isMouseNearHeader.current) setIsHeaderVisible(false);
         }, settings.toolbarAutoHideDelay || 3000);
       }
     }
@@ -223,21 +206,18 @@ export default function EditorView() {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, [handleMouseMove]);
 
-  // Toolbar auto-hide logic
+  // Toolbar auto-hide — using ref to avoid re-renders
   const handleMouseNearBottom = useCallback((e: React.MouseEvent) => {
     const threshold = 120;
     const distFromBottom = window.innerHeight - e.clientY;
     if (distFromBottom < threshold) {
       setIsToolbarVisible(true);
-      if (toolbarHideTimer) clearTimeout(toolbarHideTimer);
-      const timer = setTimeout(() => {
-        if (!isMouseNearToolbar.current) {
-          setIsToolbarVisible(false);
-        }
+      if (toolbarHideTimerRef.current) clearTimeout(toolbarHideTimerRef.current);
+      toolbarHideTimerRef.current = setTimeout(() => {
+        if (!isMouseNearToolbar.current) setIsToolbarVisible(false);
       }, settings.toolbarAutoHideDelay);
-      setToolbarHideTimer(timer);
     }
-  }, [settings.toolbarAutoHideDelay, toolbarHideTimer, setIsToolbarVisible]);
+  }, [settings.toolbarAutoHideDelay, setIsToolbarVisible]);
 
   if (!currentSession) {
     return (
@@ -255,11 +235,13 @@ export default function EditorView() {
   return (
     <div className="h-screen bg-[#0f1117] flex flex-col overflow-hidden relative">
       {/* Top Header Bar */}
-      <header 
+      <header
         className={cn(
-          "border-b border-white/[0.06] flex items-center px-4 gap-3 shrink-0 z-50 transition-all duration-300",
-          isFullscreen ? "absolute top-0 left-0 right-0 bg-[#0f1117]" : "relative",
-          isFullscreen ? (isHeaderVisible ? "translate-y-0 opacity-100 h-12" : "-translate-y-full opacity-0 h-12") : "translate-y-0 opacity-100 h-12"
+          'border-b border-white/[0.06] flex items-center px-4 gap-3 shrink-0 z-50 transition-all duration-300',
+          isFullscreen ? 'absolute top-0 left-0 right-0 bg-[#0f1117]' : 'relative',
+          isFullscreen
+            ? (isHeaderVisible ? 'translate-y-0 opacity-100 h-12' : '-translate-y-full opacity-0 h-12')
+            : 'translate-y-0 opacity-100 h-12'
         )}
         onMouseEnter={() => { isMouseNearHeader.current = true; setIsHeaderVisible(true); }}
         onMouseLeave={() => {
@@ -271,10 +253,7 @@ export default function EditorView() {
         }}
       >
         {/* Logo */}
-        <button
-          onClick={() => setCurrentScreen('home')}
-          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-        >
+        <button onClick={() => setCurrentScreen('home')} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
             <Zap className="w-3.5 h-3.5 text-white" />
           </div>
@@ -293,7 +272,6 @@ export default function EditorView() {
 
         {/* Right Actions */}
         <div className="flex items-center gap-1">
-          {/* Auto-save indicator */}
           {lastAutoSave > 0 && (
             <span className="text-white/20 text-xs flex items-center gap-1 mr-2">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/60" />
@@ -388,10 +366,8 @@ export default function EditorView() {
 
       {/* Main Editor Area */}
       <div className="flex-1 flex overflow-hidden min-h-0">
-        {/* Side Panel */}
         <SidePanel />
 
-        {/* Center: Canvas + Speaker Notes */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Slide Canvas */}
           <div
@@ -412,8 +388,10 @@ export default function EditorView() {
               onMouseEnter={() => { isMouseNearToolbar.current = true; setIsToolbarVisible(true); }}
               onMouseLeave={() => {
                 isMouseNearToolbar.current = false;
-                const t = setTimeout(() => setIsToolbarVisible(false), settings.toolbarAutoHideDelay);
-                setToolbarHideTimer(t);
+                toolbarHideTimerRef.current = setTimeout(
+                  () => setIsToolbarVisible(false),
+                  settings.toolbarAutoHideDelay
+                );
               }}
             >
               <FloatingToolbar onToggleNotes={() => setShowNotePanel(!showNotePanel)} />
@@ -432,14 +410,13 @@ export default function EditorView() {
             )}
           </div>
 
-          {/* Speaker Notes Panel (bottom, collapsible) */}
+          {/* Speaker Notes Panel */}
           {showNotePanel && (
             <div className="h-36 border-t border-white/[0.06] bg-[#0f1117] shrink-0">
               <SpeakerNotePanel onClose={() => setShowNotePanel(false)} />
             </div>
           )}
 
-          {/* Pointer Overlay */}
           <PointerOverlay />
         </div>
       </div>
