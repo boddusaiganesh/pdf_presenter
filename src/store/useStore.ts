@@ -31,6 +31,18 @@ export interface SlideSection {
   afterSlideIndex: number;
 }
 
+export interface PopupSlide {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  isMinimized: boolean;
+  targetSlideId?: string; // If mirroring another slide
+  mediaType?: MediaType;
+  mediaUrl?: string;
+}
+
 export interface Slide {
   id: string;
   type: 'pdf' | MediaType;
@@ -41,6 +53,7 @@ export interface Slide {
   note: SpeakerNote;
   hidden: boolean;
   duration?: number; // seconds spent on slide
+  popups?: PopupSlide[];
 }
 
 export interface Session {
@@ -217,6 +230,11 @@ interface AppStore {
   updateNote: (slideId: string, content: string) => void;
   clearSlideAnnotation: (slideId: string) => void;
   clearAllAnnotations: () => void;
+
+  // ── Popups ──
+  addPopupSlide: (slideId: string, popup: Partial<PopupSlide>) => void;
+  updatePopupSlide: (slideId: string, popupId: string, updates: Partial<PopupSlide>) => void;
+  removePopupSlide: (slideId: string, popupId: string) => void;
 
   // ── Sections ──
   sections: SlideSection[];
@@ -572,6 +590,70 @@ export const useStore = create<AppStore>()(
             annotation: { ...slide.annotation, fabricJSON: '' },
           }));
           const updated = { ...s.currentSession, slides };
+          return {
+            currentSession: updated,
+            sessions: s.sessions.map((sess) => (sess.id === updated.id ? updated : sess)),
+          };
+        });
+      },
+
+      // ── Popups ──
+      addPopupSlide: (slideId, popup) => {
+        set((s) => {
+          if (!s.currentSession) return {};
+          const newPopup: PopupSlide = {
+            id: uuidv4(),
+            x: 100,
+            y: 100,
+            width: 400,
+            height: 300,
+            isMinimized: false,
+            ...popup
+          };
+          const slides = s.currentSession.slides.map((slide) =>
+            slide.id === slideId
+              ? { ...slide, popups: [...(slide.popups || []), newPopup] }
+              : slide
+          );
+          const updated = { ...s.currentSession, slides, updatedAt: new Date().toISOString() };
+          return {
+            currentSession: updated,
+            sessions: s.sessions.map((sess) => (sess.id === updated.id ? updated : sess)),
+          };
+        });
+      },
+
+      updatePopupSlide: (slideId, popupId, updates) => {
+        set((s) => {
+          if (!s.currentSession) return {};
+          const slides = s.currentSession.slides.map((slide) =>
+            slide.id === slideId && slide.popups
+              ? {
+                  ...slide,
+                  popups: slide.popups.map((p) => (p.id === popupId ? { ...p, ...updates } : p)),
+                }
+              : slide
+          );
+          const updated = { ...s.currentSession, slides, updatedAt: new Date().toISOString() };
+          return {
+            currentSession: updated,
+            sessions: s.sessions.map((sess) => (sess.id === updated.id ? updated : sess)),
+          };
+        });
+      },
+
+      removePopupSlide: (slideId, popupId) => {
+        set((s) => {
+          if (!s.currentSession) return {};
+          const slides = s.currentSession.slides.map((slide) =>
+            slide.id === slideId && slide.popups
+              ? {
+                  ...slide,
+                  popups: slide.popups.filter((p) => p.id !== popupId),
+                }
+              : slide
+          );
+          const updated = { ...s.currentSession, slides, updatedAt: new Date().toISOString() };
           return {
             currentSession: updated,
             sessions: s.sessions.map((sess) => (sess.id === updated.id ? updated : sess)),

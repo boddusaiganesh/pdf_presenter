@@ -5,7 +5,7 @@ import {
   Crosshair, Zap, Eye, EyeOff, ZoomIn, ZoomOut, Maximize2,
   Undo2, Redo2, Trash2, Settings, LayoutGrid, Video,
   Timer, BookOpen, Play, Pause, RotateCcw, Monitor,
-  Triangle, Lasso, Lock, PanelLeft, Bomb
+  Triangle, Lasso, Lock, PanelLeft, Bomb, Layout
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { cn } from '../utils/cn';
@@ -430,6 +430,19 @@ export default function FloatingToolbar({ onToggleNotes }: { onToggleNotes?: () 
           shortcut="Z"
           onClick={() => setIsFrozen(!isFrozen)}
           active={isFrozen}
+        />
+
+        {/* Popup Slide */}
+        <ToolbarButton
+          icon={<Layout className="w-4 h-4" />}
+          label="Add Popup Slide"
+          onClick={() => {
+            const visibleSlides = currentSession?.slides.filter(s => !s.hidden) || [];
+            const slide = visibleSlides[currentSlideIndex];
+            if (slide) {
+              useStore.getState().addPopupSlide(slide.id, {});
+            }
+          }}
         />
 
         <Divider />

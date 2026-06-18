@@ -373,6 +373,9 @@ export default function EditorView() {
             onClick={() => {
               if (settings.autoCloseSidePanel) setIsSidePanelOpen(false);
               setPreflightCheck('toolbarAutoHide', true);
+              if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+              }
               setCurrentScreen('preflight');
             }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 text-white text-xs font-semibold shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:scale-[1.02] transition-all"

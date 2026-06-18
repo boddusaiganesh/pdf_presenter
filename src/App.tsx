@@ -21,6 +21,20 @@ export default function App() {
     root.style.setProperty('--accent', settings.accentColor);
   }, [settings.theme, settings.accentColor]);
 
+  // Prevent native browser pinch-to-zoom globally
+  useEffect(() => {
+    const preventNativeZoom = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+      }
+    };
+    
+    document.addEventListener('wheel', preventNativeZoom, { passive: false });
+    return () => {
+      document.removeEventListener('wheel', preventNativeZoom);
+    };
+  }, []);
+
   const renderScreen = () => {
     switch (currentScreen) {
       case 'home':

@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore';
 import { renderPage } from '../utils/pdfRenderer';
 import { detectMediaType, isVideoType } from '../utils/mediaDetector';
 import AnnotationCanvas from './AnnotationCanvas';
+import SlidePopup from './SlidePopup';
 import html2canvas from 'html2canvas';
 import { cn } from '../utils/cn';
 import {
@@ -147,10 +148,10 @@ export default function SlideCanvas({ isPresenting = false }: SlideCanvasProps) 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
-      const delta = e.deltaY > 0 ? -0.1 : 0.1;
-      setZoomLevel(zoomLevel + delta);
+      // Trackpad zooming on the main canvas has been explicitly disabled
+      // User can only zoom via the UI toolbar controls
     }
-  }, [zoomLevel, setZoomLevel]);
+  }, []);
 
   // Pan on middle mouse or when zoomed
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -400,6 +401,11 @@ export default function SlideCanvas({ isPresenting = false }: SlideCanvasProps) 
           )}
         </div>
       </div>
+
+      {/* Popups */}
+      {!isBlackScreen && currentSlide?.popups?.map((popup, index) => (
+        <SlidePopup key={popup.id} slideId={currentSlide.id} popup={popup} index={index} />
+      ))}
 
       {/* Zoom indicator */}
       {zoomLevel !== 1 && (
