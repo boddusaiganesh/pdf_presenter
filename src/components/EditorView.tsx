@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Save, Play, Home, Plus, Film, Download,
   Settings, BookOpen, ChevronRight, ChevronDown, Keyboard,
-  FileText, Zap, AlertTriangle, Clock
+  FileText, Zap, AlertTriangle, Clock, Maximize
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import SidePanel from './SidePanel';
@@ -169,6 +169,18 @@ export default function EditorView() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
+  const toggleFullScreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch((err) => {
+        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+      });
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+  };
+
   // Track mouse position for pointer
   const handleMouseMove = useCallback((e: MouseEvent) => {
     setPointerPosition({ x: e.clientX, y: e.clientY });
@@ -301,6 +313,15 @@ export default function EditorView() {
           </button>
 
           <div className="w-px h-5 bg-white/[0.08] mx-1" />
+
+          <button
+            onClick={toggleFullScreen}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-white/70 hover:text-white text-xs font-semibold transition-all"
+            title="Toggle Full Screen"
+          >
+            <Maximize className="w-3.5 h-3.5" />
+            Full Screen
+          </button>
 
           <button
             onClick={() => {
