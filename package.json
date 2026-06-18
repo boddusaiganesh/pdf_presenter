@@ -1,5 +1,5 @@
 {
-  "name": "react-vite-tailwind",
+  "name": "apex-presenter",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -14,8 +14,8 @@
     "electron:pack:all": "npm run build && electron-builder --win --mac"
   },
   "build": {
-    "appId": "com.pdfpresenter.pro",
-    "productName": "PDF Presenter Pro",
+    "appId": "com.apexpresenter.app",
+    "productName": "ApexPresenter",
     "directories": {
       "output": "release"
     },
@@ -24,12 +24,18 @@
       "main.cjs"
     ],
     "mac": {
-      "target": ["dmg", "zip"],
-      "icon": "public/favicon.ico"
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "public/icon.png"
     },
     "win": {
-      "target": ["nsis", "portable"],
-      "icon": "public/favicon.ico"
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "public/icon.png"
     }
   },
   "dependencies": {
@@ -49,6 +55,7 @@
     "framer-motion": "^12.40.0",
     "html2canvas": "^1.4.1",
     "idb-keyval": "^6.2.5",
+    "jimp": "^0.22.10",
     "jspdf": "^4.2.1",
     "jszip": "^3.10.1",
     "lucide-react": "^1.20.0",

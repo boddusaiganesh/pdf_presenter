@@ -322,11 +322,9 @@ export default function SettingsPanel() {
         return (
           <div className="space-y-4">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-xl shadow-indigo-500/30">
-                <Monitor className="w-8 h-8 text-white" />
-              </div>
+              <img src="/icon.png" alt="ApexPresenter Logo" className="w-16 h-16 rounded-2xl shadow-xl shadow-indigo-500/30" />
               <div>
-                <h3 className="text-white text-xl font-bold">PDF Presenter Pro</h3>
+                <h3 className="text-white text-xl font-bold">ApexPresenter</h3>
                 <p className="text-white/50 text-sm">Remote Edition — Version 1.0.0</p>
               </div>
             </div>

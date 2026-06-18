@@ -41,6 +41,7 @@ export interface PopupSlide {
   targetSlideId?: string; // If mirroring another slide
   mediaType?: MediaType;
   mediaUrl?: string;
+  annotation?: SlideAnnotation;
 }
 
 export interface Slide {
@@ -226,7 +227,7 @@ interface AppStore {
   toggleHideSlide: (index: number) => void;
   duplicateSlide: (index: number) => void;
   updateSlide: (index: number, updates: Partial<Slide>) => void;
-  updateAnnotation: (slideId: string, fabricJSON: string) => void;
+  updateAnnotation: (slideId: string, fabricJSON: string, popupId?: string) => void;
   updateNote: (slideId: string, content: string) => void;
   clearSlideAnnotation: (slideId: string) => void;
   clearAllAnnotations: () => void;
@@ -545,14 +546,21 @@ export const useStore = create<AppStore>()(
         });
       },
 
-      updateAnnotation: (slideId, fabricJSON) => {
+      updateAnnotation: (slideId, fabricJSON, popupId) => {
         set((s) => {
           if (!s.currentSession) return {};
-          const slides = s.currentSession.slides.map((slide) =>
-            slide.id === slideId
-              ? { ...slide, annotation: { ...slide.annotation, fabricJSON } }
-              : slide
-          );
+          const slides = s.currentSession.slides.map((slide) => {
+            if (slide.id !== slideId) return slide;
+            if (popupId) {
+              const popups = slide.popups?.map(p => 
+                p.id === popupId 
+                  ? { ...p, annotation: { id: p.id, visible: true, locked: false, ...(p.annotation || {}), fabricJSON } }
+                  : p
+              );
+              return { ...slide, popups };
+            }
+            return { ...slide, annotation: { ...slide.annotation, fabricJSON } };
+          });
           const updated = { ...s.currentSession, slides };
           return {
             currentSession: updated,
@@ -582,7 +590,14 @@ export const useStore = create<AppStore>()(
           if (!s.currentSession) return {};
           const slides = s.currentSession.slides.map((slide) =>
             slide.id === slideId
-              ? { ...slide, annotation: { ...slide.annotation, fabricJSON: '' } }
+              ? { 
+                  ...slide, 
+                  annotation: { ...slide.annotation, fabricJSON: '' },
+                  popups: slide.popups?.map(p => ({ 
+                    ...p, 
+                    annotation: p.annotation ? { ...p.annotation, fabricJSON: '' } : undefined 
+                  }))
+                }
               : slide
           );
           const updated = { ...s.currentSession, slides };
@@ -599,6 +614,10 @@ export const useStore = create<AppStore>()(
           const slides = s.currentSession.slides.map((slide) => ({
             ...slide,
             annotation: { ...slide.annotation, fabricJSON: '' },
+            popups: slide.popups?.map(p => ({ 
+              ...p, 
+              annotation: p.annotation ? { ...p.annotation, fabricJSON: '' } : undefined 
+            }))
           }));
           const updated = { ...s.currentSession, slides };
           return {

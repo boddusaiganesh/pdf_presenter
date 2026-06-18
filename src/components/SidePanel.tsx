@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import {
   Eye, EyeOff, Trash2, Copy, Plus, GripVertical, Film,
   Image, FileText, X, ChevronRight,
-  Video, Link, Layout, AlignJustify, MoreHorizontal
+  Video, Link, Layout, AlignJustify, MoreHorizontal, Play
 } from 'lucide-react';
 import { useStore, Slide } from '../store/useStore';
 import { cn } from '../utils/cn';
@@ -44,20 +44,11 @@ function SlideThumbnail({
         {slide.mediaUrl ? <img src={slide.mediaUrl} alt="" className="w-full h-full object-cover" /> : <Image className="w-6 h-6 text-white/30" />}
       </div>
     );
-    if (slide.type === 'youtube' || slide.type === 'vimeo' || slide.type === 'loom') return (
-      <div className="w-full h-full bg-slate-900 flex flex-col items-center justify-center gap-1 rounded">
-        <Film className="w-6 h-6 text-red-400" />
-        <span className="text-white/30 text-[9px]">{slide.type}</span>
-      </div>
-    );
-    if (slide.type === 'video') return (
-      <div className="w-full h-full bg-slate-900 flex items-center justify-center rounded">
-        <Video className="w-6 h-6 text-blue-400" />
-      </div>
-    );
-    if (slide.type === 'iframe') return (
-      <div className="w-full h-full bg-slate-900 flex items-center justify-center rounded">
-        <Link className="w-6 h-6 text-teal-400" />
+    if (['youtube', 'vimeo', 'loom', 'video', 'direct-mp4', 'iframe', 'googledrive', 'dropbox', 'onedrive'].includes(slide.type)) return (
+      <div className="w-full h-full bg-[#161925] flex items-center justify-center relative">
+        <div className="w-8 h-6 bg-black/50 rounded flex items-center justify-center border border-white/10 shadow-sm">
+          <Play className="w-3 h-3 text-white ml-0.5 fill-white" />
+        </div>
       </div>
     );
     return <div className="w-full h-full bg-slate-800 flex items-center justify-center rounded"><FileText className="w-6 h-6 text-white/30" /></div>;

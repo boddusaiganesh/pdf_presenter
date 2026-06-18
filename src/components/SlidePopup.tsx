@@ -3,6 +3,8 @@ import { motion, useDragControls } from 'framer-motion';
 import { useStore, PopupSlide } from '../store/useStore';
 import { X, Minus, Trash2, Layout, Image as ImageIcon, ZoomIn, ZoomOut, MoreVertical, Copy, Link } from 'lucide-react';
 import { cn } from '../utils/cn';
+import { detectMediaType } from '../utils/mediaDetector';
+import AnnotationCanvas from './AnnotationCanvas';
 
 interface SlidePopupProps {
   slideId: string;
@@ -61,6 +63,34 @@ export default function SlidePopup({ slideId, popup, index }: SlidePopupProps) {
     };
     window.addEventListener('pointermove', handlePointerMove);
     window.addEventListener('pointerup', handlePointerUp);
+  };
+
+  const handleContentPointerDown = (e: React.PointerEvent) => {
+    if (contentZoom <= 1 || !hasContent) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setIsPanningContent(true);
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startPanX = contentPan.x;
+    const startPanY = contentPan.y;
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      const dx = moveEvent.clientX - startX;
+      const dy = moveEvent.clientY - startY;
+      setContentPan({ x: startPanX + dx, y: startPanY + dy });
+    };
+
+    const handlePointerUp = () => {
+      setIsPanningContent(false);
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerUp);
+    };
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerUp);
   };
 
   const hasContent = popup.targetSlideId || popup.mediaType;
@@ -151,7 +181,9 @@ export default function SlidePopup({ slideId, popup, index }: SlidePopupProps) {
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && urlInputValue.trim()) {
-                        updatePopupSlide(slideId, popup.id, { mediaType: 'video', mediaUrl: urlInputValue.trim(), targetSlideId: undefined });
+                        const detected = detectMediaType(urlInputValue.trim());
+                        // @ts-ignore
+                        updatePopupSlide(slideId, popup.id, { mediaType: detected.type, mediaUrl: detected.originalUrl, targetSlideId: undefined });
                         setShowUrlInput(false); setUrlInputValue(''); setShowMenu(false);
                       }
                       if (e.key === 'Escape') { setShowUrlInput(false); setUrlInputValue(''); }
@@ -162,7 +194,9 @@ export default function SlidePopup({ slideId, popup, index }: SlidePopupProps) {
                       className="flex-1 py-1 text-xs bg-indigo-500 text-white rounded hover:bg-indigo-400 transition-colors"
                       onClick={() => {
                         if (urlInputValue.trim()) {
-                          updatePopupSlide(slideId, popup.id, { mediaType: 'video', mediaUrl: urlInputValue.trim(), targetSlideId: undefined });
+                          const detected = detectMediaType(urlInputValue.trim());
+                          // @ts-ignore
+                          updatePopupSlide(slideId, popup.id, { mediaType: detected.type, mediaUrl: detected.originalUrl, targetSlideId: undefined });
                         }
                         setShowUrlInput(false); setUrlInputValue(''); setShowMenu(false);
                       }}
@@ -181,6 +215,15 @@ export default function SlidePopup({ slideId, popup, index }: SlidePopupProps) {
               )}
 
               <div className="h-px bg-white/10 my-1" />
+              <button className="w-full text-left px-3 py-2 text-xs text-white/70 hover:text-white hover:bg-white/5 flex items-center gap-2"
+                onClick={() => { 
+                  const defaultRect = { width: 400, height: 300 };
+                  setLocalRect(prev => ({ ...prev, ...defaultRect }));
+                  updatePopupSlide(slideId, popup.id, defaultRect); 
+                  setShowMenu(false); 
+                }}>
+                <Layout className="w-3.5 h-3.5" /> Reset Popup Size
+              </button>
               <button className="w-full text-left px-3 py-2 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 flex items-center gap-2"
                 onClick={() => { updatePopupSlide(slideId, popup.id, { targetSlideId: undefined, mediaType: undefined, mediaUrl: undefined }); setShowMenu(false); }}>
                 <Trash2 className="w-3.5 h-3.5" /> Clear Content
@@ -212,13 +255,7 @@ export default function SlidePopup({ slideId, popup, index }: SlidePopupProps) {
             setContentPan(prev => ({ x: prev.x - e.deltaX, y: prev.y - e.deltaY }));
           }
         }}
-        onPointerDown={(e) => {
-          if (contentZoom > 1 && hasContent) { setIsPanningContent(true); e.currentTarget.setPointerCapture(e.pointerId); }
-        }}
-        onPointerMove={(e) => {
-          if (isPanningContent) setContentPan(prev => ({ x: prev.x + e.movementX, y: prev.y + e.movementY }));
-        }}
-        onPointerUp={(e) => { setIsPanningContent(false); e.currentTarget.releasePointerCapture(e.pointerId); }}
+        onPointerDown={handleContentPointerDown}
         style={{ cursor: isPanningContent ? 'grabbing' : contentZoom > 1 ? 'grab' : 'default' }}
       >
         <div className="w-full h-full" style={{
@@ -263,23 +300,57 @@ export default function SlidePopup({ slideId, popup, index }: SlidePopupProps) {
             <div className="w-full h-full bg-black" />
           ) : popup.mediaType === 'image' && popup.mediaUrl ? (
             <img src={popup.mediaUrl} className="w-full h-full object-contain" alt="" />
-          ) : (popup.mediaType === 'video' || popup.mediaType === 'youtube' || popup.mediaType === 'vimeo') ? (
-            <iframe src={popup.mediaUrl} className="w-full h-full border-0 pointer-events-auto" allow="autoplay; fullscreen" allowFullScreen />
+          ) : popup.mediaUrl ? (
+            (() => {
+              const detected = detectMediaType(popup.mediaUrl);
+              if (detected.type === 'direct-mp4') {
+                return (
+                  <video 
+                    src={detected.embedUrl} 
+                    className="w-full h-full object-contain pointer-events-auto" 
+                    controls 
+                    autoPlay
+                  />
+                );
+              }
+              return (
+                <iframe 
+                  src={detected.embedUrl} 
+                  className="w-full h-full border-0 pointer-events-auto" 
+                  allow="autoplay; fullscreen; picture-in-picture" 
+                  allowFullScreen 
+                />
+              );
+            })()
           ) : null}
         </div>
 
+        {/* Annotation Layer */}
+        <AnnotationCanvas 
+          width={localRect.width} 
+          height={localRect.height - 32} 
+          slideId={slideId} 
+          popupId={popup.id} 
+        />
+
         {hasContent && (
-          <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-black/60 border border-white/10 shadow-lg backdrop-blur-sm rounded-lg p-1 opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-auto">
+          <div 
+            className="absolute bottom-2 left-2 flex items-center gap-1 bg-black/60 border border-white/10 shadow-lg backdrop-blur-sm rounded-lg p-1 opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-auto"
+            onPointerDown={(e) => e.stopPropagation()}
+          >
             <button onClick={() => setContentZoom(prev => Math.max(0.25, prev - 0.25))}
-              className="p-1 text-white/50 hover:text-white hover:bg-white/10 rounded cursor-pointer">
+              className="p-1 text-white/50 hover:text-white hover:bg-white/10 rounded cursor-pointer"
+              title="Zoom Out">
               <ZoomOut className="w-3.5 h-3.5" />
             </button>
             <button onClick={() => { setContentZoom(1); setContentPan({ x: 0, y: 0 }); }}
-              className="px-1 text-[10px] text-white/50 hover:text-white font-mono min-w-[36px] cursor-pointer">
+              className="px-1 text-[10px] text-white/50 hover:text-white font-mono min-w-[36px] cursor-pointer"
+              title="Reset Zoom & Pan">
               {Math.round(contentZoom * 100)}%
             </button>
             <button onClick={() => setContentZoom(prev => Math.min(5, prev + 0.25))}
-              className="p-1 text-white/50 hover:text-white hover:bg-white/10 rounded cursor-pointer">
+              className="p-1 text-white/50 hover:text-white hover:bg-white/10 rounded cursor-pointer"
+              title="Zoom In">
               <ZoomIn className="w-3.5 h-3.5" />
             </button>
           </div>

@@ -254,9 +254,7 @@ export default function EditorView() {
       >
         {/* Logo */}
         <button onClick={() => setCurrentScreen('home')} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
-            <Zap className="w-3.5 h-3.5 text-white" />
-          </div>
+          <img src="/icon.png" alt="ApexPresenter Logo" className="w-7 h-7 rounded-lg shadow-sm" />
         </button>
 
         {/* Session Name */}
@@ -271,7 +269,7 @@ export default function EditorView() {
         <div className="flex-1" />
 
         {/* Right Actions */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar shrink-0">
           {lastAutoSave > 0 && (
             <span className="text-white/20 text-xs flex items-center gap-1 mr-2">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400/60" />

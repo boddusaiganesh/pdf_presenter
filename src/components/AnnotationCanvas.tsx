@@ -8,9 +8,10 @@ interface AnnotationCanvasProps {
   width: number;
   height: number;
   slideId: string;
+  popupId?: string;
 }
 
-export default function AnnotationCanvas({ width, height, slideId }: AnnotationCanvasProps) {
+export default function AnnotationCanvas({ width, height, slideId, popupId }: AnnotationCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<Canvas | null>(null);
   const isDrawingRef = useRef(false);
@@ -21,6 +22,7 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
   const isHistoryUpdate = useRef(false);
   const isInternalChangeRef = useRef(false);
   const slideIdRef = useRef(slideId);
+  const popupIdRef = useRef(popupId);
 
   // Refs for all drawing state — handlers read from refs so they never go stale
   const toolRef = useRef<DrawTool>('select');
@@ -52,15 +54,23 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
   useEffect(() => { boldRef.current = isBold; }, [isBold]);
   useEffect(() => { italicRef.current = isItalic; }, [isItalic]);
   useEffect(() => { slideIdRef.current = slideId; }, [slideId]);
+  useEffect(() => { popupIdRef.current = popupId; }, [popupId]);
 
   const updateAnnotationRef = useRef(updateAnnotation);
   useEffect(() => { updateAnnotationRef.current = updateAnnotation; }, [updateAnnotation]);
 
   const slide = currentSession?.slides.find((s) => s.id === slideId);
+  const popup = popupId ? slide?.popups?.find(p => p.id === popupId) : undefined;
+  const currentAnnotation = popupId ? popup?.annotation : slide?.annotation;
 
   // ── Initialize Fabric canvas ONCE ──────────────────────────────────────────
   useEffect(() => {
     if (!canvasRef.current) return;
+
+    // Guard against React Strict Mode double-mount: Fabric stamps a _fabricCanvas
+    // property on the DOM element after initialization. If it's already there,
+    // the canvas instance is still live in fabricRef — just bail out.
+    if ((canvasRef.current as any)._fabricCanvas) return;
 
     const canvas = new Canvas(canvasRef.current, {
       isDrawingMode: false,
@@ -84,7 +94,7 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
       if (newHistory.length > 50) newHistory.shift();
       historyRef.current = newHistory;
       historyIndexRef.current = newHistory.length - 1;
-      updateAnnotationRef.current(slideIdRef.current, json);
+      updateAnnotationRef.current(slideIdRef.current, json, popupIdRef.current);
     };
 
     // Only listen to these — NOT object:added (fires during loadFromJSON causing loops)
@@ -105,7 +115,7 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
       const shapeTools: DrawTool[] = ['line', 'arrow', 'rectangle', 'circle', 'triangle', 'text', 'sticky'];
       if (!shapeTools.includes(tool)) return;
 
-      const pointer = canvas.getScenePoint(opt.e);
+      const pointer = opt.scenePoint || canvas.getScenePoint(opt.e);
       startPointRef.current = { x: pointer.x, y: pointer.y };
       isDrawingRef.current = true;
 
@@ -204,7 +214,7 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
 
       if (!startPointRef.current || !currentShapeRef.current) return;
 
-      const pointer = canvas.getScenePoint(opt.e);
+      const pointer = opt.scenePoint || canvas.getScenePoint(opt.e);
       const start = startPointRef.current;
       const shape = currentShapeRef.current;
       const w = Math.abs(pointer.x - start.x);
@@ -221,7 +231,9 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
       } else if (shape instanceof Triangle) {
         shape.set({ left, top, width: w, height: h });
       }
-      canvas.renderAll();
+
+      shape.setCoords();
+      canvas.requestRenderAll();
     });
 
     // ── Mouse Up ──
@@ -236,6 +248,7 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
 
       if (currentShapeRef.current) {
         const shape = currentShapeRef.current;
+        shape.setCoords();
         shape.set({ selectable: true, evented: true });
 
         // Arrow: group line + arrowhead so they move together as one object
@@ -268,8 +281,13 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
     });
 
     return () => {
-      canvas.dispose();
-      fabricRef.current = null;
+      // Only dispose if this canvas instance is still the active one.
+      // In React Strict Mode the cleanup fires before the second mount;
+      // checking fabricRef prevents a double-dispose crash.
+      if (fabricRef.current === canvas) {
+        canvas.dispose();
+        fabricRef.current = null;
+      }
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -291,7 +309,7 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
         fabricRef.current?.loadFromJSON(JSON.parse(json)).then(() => {
           fabricRef.current?.renderAll();
           isInternalChangeRef.current = true;
-          updateAnnotationRef.current(slideIdRef.current, json);
+          updateAnnotationRef.current(slideIdRef.current, json, popupIdRef.current);
           isHistoryUpdate.current = false;
         });
       }
@@ -305,7 +323,7 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
         fabricRef.current?.loadFromJSON(JSON.parse(json)).then(() => {
           fabricRef.current?.renderAll();
           isInternalChangeRef.current = true;
-          updateAnnotationRef.current(slideIdRef.current, json);
+          updateAnnotationRef.current(slideIdRef.current, json, popupIdRef.current);
           isHistoryUpdate.current = false;
         });
       }
@@ -339,17 +357,20 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
     canvas.backgroundColor = '';
 
     const currentSlide = useStore.getState().currentSession?.slides.find((s) => s.id === slideId);
-    if (currentSlide?.annotation.fabricJSON) {
+    const currentPopup = popupId ? currentSlide?.popups?.find(p => p.id === popupId) : undefined;
+    const annotation = popupId ? currentPopup?.annotation : currentSlide?.annotation;
+
+    if (annotation?.fabricJSON) {
       try {
         const parsed =
-          typeof currentSlide.annotation.fabricJSON === 'string'
-            ? JSON.parse(currentSlide.annotation.fabricJSON)
-            : currentSlide.annotation.fabricJSON;
+          typeof annotation.fabricJSON === 'string'
+            ? JSON.parse(annotation.fabricJSON)
+            : annotation.fabricJSON;
 
         historyRef.current = [
-          typeof currentSlide.annotation.fabricJSON === 'string'
-            ? currentSlide.annotation.fabricJSON
-            : JSON.stringify(currentSlide.annotation.fabricJSON),
+          typeof annotation.fabricJSON === 'string'
+            ? annotation.fabricJSON
+            : JSON.stringify(annotation.fabricJSON),
         ];
         historyIndexRef.current = 0;
         isHistoryUpdate.current = true;
@@ -368,18 +389,17 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
     }
   }, [slideId]);
 
-  // ── Sync external clear (e.g. "Clear This Slide" button) ───────────────────
   useEffect(() => {
     if (!fabricRef.current) return;
     if (isInternalChangeRef.current) {
       isInternalChangeRef.current = false;
       return;
     }
-    if (!slide?.annotation.fabricJSON) {
+    if (!currentAnnotation?.fabricJSON) {
       fabricRef.current.clear();
       fabricRef.current.renderAll();
     }
-  }, [slide?.annotation.fabricJSON]);
+  }, [currentAnnotation?.fabricJSON]);
 
   // ── Update canvas drawing mode when tool changes ───────────────────────────
   useEffect(() => {
@@ -448,15 +468,17 @@ export default function AnnotationCanvas({ width, height, slideId }: AnnotationC
   };
 
   const isInteractiveMedia = slide?.type && !['pdf', 'image', 'blank-white', 'blank-black'].includes(slide.type);
-  const shouldPassThrough = currentTool === 'select' && isInteractiveMedia;
+  const popupIsInteractive = popup?.targetSlideId || popup?.mediaType;
+  const targetMediaIsInteractive = popupId ? popupIsInteractive : isInteractiveMedia;
+  const shouldPassThrough = currentTool === 'select' && targetMediaIsInteractive;
 
   return (
     <div
       className={cn(
         'absolute inset-0',
         getCursorClass(),
-        slide?.annotation.visible === false ? 'opacity-0' : 'opacity-100',
-        slide?.annotation.locked || shouldPassThrough ? 'pointer-events-none' : 'pointer-events-auto'
+        currentAnnotation?.visible === false ? 'opacity-0' : 'opacity-100',
+        currentAnnotation?.locked || shouldPassThrough ? 'pointer-events-none' : 'pointer-events-auto'
       )}
       style={{ zIndex: 20 }}
     >

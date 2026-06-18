@@ -6,7 +6,7 @@ import AnnotationCanvas from './AnnotationCanvas';
 import SlidePopup from './SlidePopup';
 import html2canvas from 'html2canvas';
 import { cn } from '../utils/cn';
-import { Film, Image as ImageIcon, FileText } from 'lucide-react';
+import { Film, Image as ImageIcon, FileText, Play } from 'lucide-react';
 
 interface SlideCanvasProps {
   isPresenting?: boolean;
@@ -293,8 +293,17 @@ export default function SlideCanvas({ isPresenting = false }: SlideCanvasProps) 
               >
                 {slide.type === 'pdf' && slide.pdfPageIndex !== undefined && renderedPages[slide.pdfPageIndex] ? (
                   <img src={renderedPages[slide.pdfPageIndex]} alt="" className="w-full h-full object-cover" />
+                ) : slide.type === 'image' && slide.mediaUrl ? (
+                  <img src={slide.mediaUrl} alt="" className="w-full h-full object-cover" />
+                ) : ['video', 'youtube', 'vimeo', 'loom', 'googledrive', 'dropbox', 'onedrive', 'direct-mp4', 'iframe'].includes(slide.type) ? (
+                  <div className="w-full h-full bg-[#161925] flex flex-col items-center justify-center relative">
+                    <div className="w-16 h-12 bg-black/50 rounded-xl flex items-center justify-center border border-white/10 shadow-lg backdrop-blur-sm group-hover:scale-110 transition-transform">
+                      <Play className="w-6 h-6 text-white ml-1 fill-white" />
+                    </div>
+                    <span className="absolute bottom-2 right-2 text-white/50 text-[10px] font-mono bg-black/40 px-1.5 py-0.5 rounded">{slideNumber}</span>
+                  </div>
                 ) : (
-                  <div className={cn('w-full h-full flex items-center justify-center', slide.type === 'blank-white' ? 'bg-white' : 'bg-slate-800')}>
+                  <div className={cn('w-full h-full flex items-center justify-center relative', slide.type === 'blank-white' ? 'bg-white' : 'bg-slate-800')}>
                     <span className="text-gray-500 text-xs">{slideNumber}</span>
                   </div>
                 )}

@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, session } = require('electron');
 const path = require('path');
 
 function createWindow() {
@@ -19,15 +19,14 @@ function createWindow() {
 
   // Pipe frontend console logs to the Node terminal for debugging
   win.webContents.on('console-message', (event, details) => {
-    // details contains: level, message, line, sourceId
-    const levels = ['DEBUG', 'INFO', 'WARN', 'ERROR'];
-    const logPrefix = `[Frontend ${levels[details.level] || 'INFO'}]`;
+    // details contains: level (string), message, lineNumber, sourceId
+    const logPrefix = `[Frontend ${details.level ? details.level.toUpperCase() : 'INFO'}]`;
     
     // Only print the filename instead of the full giant file path
     const file = details.sourceId ? details.sourceId.split('/').pop() : 'unknown';
     
-    if (details.level >= 2) {
-      console.error(`${logPrefix} ${details.message} (${file}:${details.line})`);
+    if (details.level === 'error' || details.level === 'warning') {
+      console.error(`${logPrefix} ${details.message} (${file}:${details.lineNumber})`);
     } else {
       console.log(`${logPrefix} ${details.message}`);
     }
@@ -38,6 +37,16 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    const responseHeaders = Object.assign({}, details.responseHeaders);
+    Object.keys(responseHeaders).forEach((key) => {
+      if (key.toLowerCase() === 'x-frame-options' || key.toLowerCase() === 'content-security-policy') {
+        delete responseHeaders[key];
+      }
+    });
+    callback({ cancel: false, responseHeaders });
+  });
+
   createWindow();
 
   app.on('activate', () => {
