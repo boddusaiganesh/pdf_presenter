@@ -443,13 +443,15 @@ export const useStore = create<AppStore>()(
       // ── Slides ──
       currentSlideIndex: 0,
       setCurrentSlideIndex: (index) => {
-        const { currentSession, timer, recordSlideTime } = get();
+        const state = get();
+        const { currentSession, timer, recordSlideTime } = state;
         if (!currentSession) return;
         const slides = currentSession.slides;
+        if (slides.length === 0) return;
         const clampedIndex = Math.max(0, Math.min(index, slides.length - 1));
 
         // Skip hidden slides — find next visible in the direction of travel
-        const direction = index >= get().currentSlideIndex ? 1 : -1;
+        const direction = index >= state.currentSlideIndex ? 1 : -1;
         let finalIndex = clampedIndex;
         if (slides[clampedIndex]?.hidden) {
           let search = clampedIndex + direction;
@@ -457,9 +459,14 @@ export const useStore = create<AppStore>()(
             if (!slides[search].hidden) { finalIndex = search; break; }
             search += direction;
           }
+          // If no visible slide found in that direction, stay put
+          if (slides[finalIndex]?.hidden) return;
         }
 
-        const currentSlide = slides[get().currentSlideIndex];
+        // Don't trigger a state update if the index hasn't changed
+        if (finalIndex === state.currentSlideIndex) return;
+
+        const currentSlide = slides[state.currentSlideIndex];
         if (currentSlide && timer.running) recordSlideTime(currentSlide.id);
         set({ currentSlideIndex: finalIndex });
       },
