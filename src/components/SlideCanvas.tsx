@@ -116,7 +116,9 @@ export default function SlideCanvas({ isPresenting = false }: SlideCanvasProps) 
     const renderNext = async (index: number) => {
       if (index >= pagesToRender.length) return;
       const pageIndex = pagesToRender[index];
-      if (renderingPages.includes(pageIndex)) {
+      // Read fresh state from the store — avoids stale closure on renderingPages
+      const freshState = useStore.getState();
+      if (freshState.renderingPages.includes(pageIndex) || freshState.renderedPages[pageIndex]) {
         scheduleNext(() => renderNext(index + 1));
         return;
       }
