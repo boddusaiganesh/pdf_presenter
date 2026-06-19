@@ -29,8 +29,7 @@ export default function SlideCanvas({ isPresenting = false }: SlideCanvasProps) 
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [frozenImage, setFrozenImage] = useState<string | null>(null);
   const previousIsFrozen = useRef(isFrozen);
-  const [videoRef] = useState(() => ({ current: null as HTMLVideoElement | null }));
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   // Slide fade transition state
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -177,12 +176,12 @@ export default function SlideCanvas({ isPresenting = false }: SlideCanvasProps) 
   // ── Mouse tracking ────────────────────────────────────────────────────────────────────────────────────────
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     setPointerPosition({ x: e.clientX, y: e.clientY });
-    if (isPanning && zoomLevel > 1) {
-      const dx = e.clientX - panStart.x;
-      const dy = e.clientY - panStart.y;
-      setPanOffset({ x: panOffset.x + dx, y: panOffset.y + dy });
-      setPanStart({ x: e.clientX, y: e.clientY });
-    }
+    // Only update pan offset when actively panning — avoids unnecessary state writes
+    if (!isPanning || zoomLevel <= 1) return;
+    const dx = e.clientX - panStart.x;
+    const dy = e.clientY - panStart.y;
+    setPanOffset({ x: panOffset.x + dx, y: panOffset.y + dy });
+    setPanStart({ x: e.clientX, y: e.clientY });
   }, [isPanning, panStart, panOffset, setPointerPosition, setPanOffset, zoomLevel]);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
@@ -264,13 +263,11 @@ export default function SlideCanvas({ isPresenting = false }: SlideCanvasProps) 
         return (
           <div className="absolute inset-0 bg-black">
             <video
-              ref={(el) => { videoRef.current = el; }}
+              ref={videoRef}
               src={detected.embedUrl}
               className={cn('w-full h-full object-contain', pointerMode !== 'normal' && 'pointer-events-none')}
               controls={pointerMode === 'normal'}
               autoPlay={settings.autoAdvanceSeconds === 0}
-              onPlay={() => setIsVideoPlaying(true)}
-              onPause={() => setIsVideoPlaying(false)}
             />
           </div>
         );
