@@ -206,8 +206,13 @@ export default function SidePanel() {
   const {
     currentSession, currentSlideIndex, setCurrentSlideIndex,
     isSidePanelOpen, setIsSidePanelOpen, renderedPages,
-    addSlide, reorderSlide, openMediaPanel
+    addSlide, reorderSlide, openMediaPanel, settings
   } = useStore();
+
+  const thumbnailHeightClass =
+    settings.thumbnailSize === 'small' ? 'h-14' :
+    settings.thumbnailSize === 'large' ? 'h-28' :
+    'h-20'; // medium (default)
 
   const [dragFromIndex, setDragFromIndex] = useState<number | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; index: number } | null>(null);
