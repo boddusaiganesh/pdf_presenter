@@ -41,7 +41,7 @@ export default function PresentingView() {
   // Keyboard shortcuts
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
-    if (tag === 'input' || tag === 'textarea') return;
+    if (tag === 'input' || tag === 'textarea' || (e.target as HTMLElement)?.contentEditable === 'true') return;
 
     const ctrl = e.ctrlKey || e.metaKey;
 
@@ -77,11 +77,22 @@ export default function PresentingView() {
         break;
       case 's':
       case 'S':
-        if (!ctrl) setPointerMode(pointerMode === 'spotlight' ? 'normal' : 'spotlight');
+        if (ctrl) {
+          e.preventDefault();
+          saveCurrentSession();
+          toast.success('Session saved');
+        } else {
+          setPointerMode(pointerMode === 'spotlight' ? 'normal' : 'spotlight');
+        }
         break;
       case 'p':
       case 'P':
-        if (!ctrl) setCurrentTool('pen');
+        if (ctrl) {
+          e.preventDefault();
+          setIsSidePanelOpen(!isSidePanelOpen);
+        } else {
+          setCurrentTool('pen');
+        }
         break;
       case 'h':
       case 'H':
@@ -93,7 +104,12 @@ export default function PresentingView() {
         break;
       case 't':
       case 'T':
-        if (!ctrl) setCurrentTool('text');
+        if (ctrl) {
+          e.preventDefault();
+          if (timer.running) pauseTimer(); else startTimer();
+        } else {
+          setCurrentTool('text');
+        }
         break;
       case 'v':
       case 'V':
@@ -104,9 +120,10 @@ export default function PresentingView() {
         if (!ctrl) setIsOverviewMode(!isOverviewMode);
         break;
       case 'd':
+      case 'D':
         if (ctrl && e.shiftKey) {
           e.preventDefault();
-          clearAllAnnotations(); // No window.confirm
+          clearAllAnnotations();
         } else if (ctrl) {
           e.preventDefault();
           const slide = slides[currentSlideIndex];
@@ -133,9 +150,11 @@ export default function PresentingView() {
   }, [
     currentSlideIndex, slides, isBlackScreen, isFrozen,
     pointerMode, isOverviewMode, zoomLevel, currentTool,
+    isSidePanelOpen, timer,
     setCurrentSlideIndex, setIsBlackScreen, setIsFrozen,
     setPointerMode, setCurrentTool, setIsOverviewMode,
     setIsSidePanelOpen, setZoomLevel,
+    saveCurrentSession, startTimer, pauseTimer,
     clearSlideAnnotation, clearAllAnnotations,
   ]);
 
