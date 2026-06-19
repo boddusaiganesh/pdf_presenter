@@ -390,7 +390,8 @@ export default function AnnotationCanvas({ width, height, slideId, popupId }: An
       historyRef.current = [JSON.stringify(canvas.toJSON())];
       historyIndexRef.current = 0;
     }
-  }, [slideId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slideId, popupId]);
 
   useEffect(() => {
     if (!fabricRef.current) return;
