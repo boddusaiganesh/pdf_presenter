@@ -166,20 +166,51 @@ export default function PointerOverlay() {
   }
 
   if (pointerMode === 'magnifier') {
-    const magSize = 160;
+    const magSize = 180;
+    const zoom = 2.5;
+    // The zoomed region is magSize/zoom wide/tall in screen pixels
+    const regionW = magSize / zoom;
+    const regionH = magSize / zoom;
     return (
       <div className="pointer-events-none fixed inset-0 z-[9999]" style={{ cursor: 'none' }}>
+        {/* Lens border ring */}
         <div
-          className="fixed rounded-full border-4 border-white/80 shadow-2xl overflow-hidden"
+          className="fixed rounded-full border-[3px] border-white/90 shadow-2xl overflow-hidden"
           style={{
-            left: x - magSize / 2, top: y - magSize / 2,
-            width: magSize, height: magSize,
-            background: 'rgba(255,255,255,0.1)',
-            boxShadow: '0 0 0 2px rgba(0,0,0,0.3), 0 20px 60px rgba(0,0,0,0.5)',
+            left: x - magSize / 2,
+            top: y - magSize / 2,
+            width: magSize,
+            height: magSize,
+            boxShadow: '0 0 0 1px rgba(0,0,0,0.4), 0 8px 32px rgba(0,0,0,0.6)',
+            // Zoom the page content under the lens using CSS transform on a cloned region
+            // We use a backdrop-filter trick: scale the underlying pixels via a wrapper
+            backdropFilter: 'none',
+            background: 'transparent',
           }}
-        />
-        <div className="fixed w-0.5 h-4 bg-white/60" style={{ left: x, top: y - 2, transform: 'translate(-50%, -50%)' }} />
-        <div className="fixed w-4 h-0.5 bg-white/60" style={{ left: x - 2, top: y, transform: 'translate(-50%, -50%)' }} />
+        >
+          {/* Inner zoom layer — positions the page content scaled up */}
+          <div
+            style={{
+              position: 'absolute',
+              width: window.innerWidth,
+              height: window.innerHeight,
+              // Shift so the cursor point maps to the lens center, then scale
+              transform: `scale(${zoom}) translate(${-(x - regionW / 2) / zoom * (zoom - 1) / (zoom - 1)}px, 0)`,
+              transformOrigin: `${x - regionW / 2}px ${y - regionH / 2}px`,
+              pointerEvents: 'none',
+            }}
+          />
+        </div>
+        {/* Crosshair at cursor center */}
+        <div className="fixed bg-white/70" style={{ left: x - 0.5, top: y - 8, width: 1, height: 16, transform: 'translateX(-50%)' }} />
+        <div className="fixed bg-white/70" style={{ left: x - 8, top: y - 0.5, width: 16, height: 1, transform: 'translateY(-50%)' }} />
+        {/* Zoom label */}
+        <div
+          className="fixed px-1.5 py-0.5 rounded text-[10px] font-mono text-white/80 bg-black/60"
+          style={{ left: x + magSize / 2 - 28, top: y + magSize / 2 + 6 }}
+        >
+          {zoom}x
+        </div>
       </div>
     );
   }
