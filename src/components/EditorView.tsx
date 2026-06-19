@@ -33,7 +33,7 @@ export default function EditorView() {
     lastAutoSave, setLastAutoSave,
     clearSlideAnnotation, clearAllAnnotations,
     setPreflightCheck,
-    isMediaPanelOpen, openMediaPanel, closeMediaPanel, mediaPanelInsertIndex
+    isMediaPanelOpen, openMediaPanel, closeMediaPanel, mediaPanelInsertIndex,
   } = useStore();
 
   const [showNotePanel, setShowNotePanel] = useState(false);
