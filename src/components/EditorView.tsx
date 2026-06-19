@@ -12,7 +12,6 @@ import SettingsPanel from './SettingsPanel';
 import MediaInsertPanel from './MediaInsertPanel';
 import SpeakerNotePanel from './SpeakerNotePanel';
 import PointerOverlay from './PointerOverlay';
-import { exportSessionFile } from '../utils/exportUtils';
 import { cn } from '../utils/cn';
 import toast from 'react-hot-toast';
 
