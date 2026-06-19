@@ -192,13 +192,18 @@ export default function PresentingView() {
   }, [handleMouseMove]);
 
   // Auto-advance slides
+  // Use a ref for currentSlideIndex so the interval doesn't restart on every slide change
+  const currentSlideIndexRef = useRef(currentSlideIndex);
+  useEffect(() => { currentSlideIndexRef.current = currentSlideIndex; }, [currentSlideIndex]);
+
   useEffect(() => {
     if (settings.autoAdvanceSeconds <= 0) return;
     const interval = setInterval(() => {
-      setCurrentSlideIndex(currentSlideIndex + 1);
+      setCurrentSlideIndex(currentSlideIndexRef.current + 1);
     }, settings.autoAdvanceSeconds * 1000);
     return () => clearInterval(interval);
-  }, [settings.autoAdvanceSeconds, currentSlideIndex, setCurrentSlideIndex]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings.autoAdvanceSeconds, setCurrentSlideIndex]);
 
   return (
     <div
