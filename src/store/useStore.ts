@@ -804,7 +804,22 @@ export const useStore = create<AppStore>()(
       pointerMode: 'normal',
       pointerPosition: { x: 0, y: 0 },
       setPointerMode: (mode) => set({ pointerMode: mode }),
-      setPointerPosition: (pos) => set({ pointerPosition: pos }),
+      // Throttle pointer position updates to one per animation frame (~60fps).
+      // Raw mousemove fires at 200+ Hz on some devices; writing to Zustand on
+      // every event causes unnecessary re-renders across all subscribers.
+      setPointerPosition: (() => {
+        let rafPending = false;
+        let latestPos = { x: 0, y: 0 };
+        return (pos: { x: number; y: number }) => {
+          latestPos = pos;
+          if (rafPending) return;
+          rafPending = true;
+          requestAnimationFrame(() => {
+            set({ pointerPosition: latestPos });
+            rafPending = false;
+          });
+        };
+      })(),
 
       // ── Timer ──
       timer: {
