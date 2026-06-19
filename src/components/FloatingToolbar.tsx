@@ -621,5 +621,6 @@ export default function FloatingToolbar({ onToggleNotes }: { onToggleNotes?: () 
       {activeSection && <div className="fixed inset-0" style={{ zIndex: 9989 }} onClick={() => setActiveSection(null)} />}
       {showTimerPanel && <div className="fixed inset-0" style={{ zIndex: 9989 }} onClick={() => setShowTimerPanel(false)} />}
     </>
+    </Tooltip.Provider>
   );
 }
