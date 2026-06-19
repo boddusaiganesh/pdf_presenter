@@ -65,8 +65,12 @@ function applyContrastToCanvas(
   out.height = height;
   const ctx = out.getContext('2d')!;
 
-  // Check if CSS filter is actually supported on this canvas context
-  const filterSupported = 'filter' in ctx;
+  // Check if CSS filter is actually applied — not just defined on the prototype.
+  // `'filter' in ctx` always returns true in Chromium (even builds that silently
+  // ignore the value), so we do a round-trip: set a known value and read it back.
+  ctx.filter = 'contrast(100%)';
+  const filterSupported = ctx.filter !== '' && ctx.filter !== 'none';
+  ctx.filter = 'none'; // reset before drawing
 
   if (filterSupported) {
     ctx.filter = `contrast(${100 + contrastStrength}%) brightness(${100 + contrastStrength * 0.3}%)`;
@@ -104,11 +108,10 @@ export async function renderPage(
   const canvas = document.createElement('canvas');
   canvas.width = viewport.width;
   canvas.height = viewport.height;
-  const ctx = canvas.getContext('2d')!;
 
   try {
-    // Render PDF into canvas first (no filter during render)
-    await page.render({ canvasContext: ctx, viewport }).promise;
+    // pdfjs-dist v5: pass the canvas element directly (not the 2d context)
+    await page.render({ canvas, viewport }).promise;
 
     let result: string;
     if (contrastBoost) {
@@ -143,10 +146,12 @@ export async function renderPageToCanvas(
 
   canvas.width = viewport.width;
   canvas.height = viewport.height;
+  // ctx is still needed below for clearRect / drawImage after contrast boost
   const ctx = canvas.getContext('2d')!;
 
   try {
-    await page.render({ canvasContext: ctx, viewport }).promise;
+    // pdfjs-dist v5: pass the canvas element directly (not the 2d context)
+    await page.render({ canvas, viewport }).promise;
 
     if (contrastBoost) {
       const boosted = applyContrastToCanvas(canvas, viewport.width, viewport.height, contrastStrength);
@@ -198,6 +203,9 @@ export async function getPageDimensions(
       height: viewport.height,
       isLandscape: viewport.width > viewport.height,
     };
+  } catch {
+    // Corrupted PDF, out-of-bounds page index, or worker crash — return safe default
+    return { width: 1280, height: 720, isLandscape: true };
   } finally {
     page?.cleanup();
   }

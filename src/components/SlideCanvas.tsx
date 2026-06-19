@@ -6,20 +6,20 @@ import AnnotationCanvas from './AnnotationCanvas';
 import SlidePopup from './SlidePopup';
 import html2canvas from 'html2canvas';
 import { cn } from '../utils/cn';
-import { Film, Image as ImageIcon, FileText, Play } from 'lucide-react';
+import { Film, FileText, Play } from 'lucide-react';
 
 interface SlideCanvasProps {
   isPresenting?: boolean;
 }
 
-export default function SlideCanvas({ isPresenting = false }: SlideCanvasProps) {
+export default function SlideCanvas({ isPresenting: _isPresenting = false }: SlideCanvasProps) {
   const {
     currentSession, currentSlideIndex, setCurrentSlideIndex,
-    renderedPages, addRenderedPage, removeRenderedPage,
+    renderedPages, addRenderedPage,
     renderingPages, addRenderingPage, removeRenderingPage,
     isBlackScreen, isFrozen, isOverviewMode, setIsOverviewMode,
     currentTool, pointerMode, setPointerPosition,
-    zoomLevel, setZoomLevel, panOffset, setPanOffset,
+    zoomLevel, panOffset, setPanOffset,
     settings,
   } = useStore();
 
@@ -60,7 +60,7 @@ export default function SlideCanvas({ isPresenting = false }: SlideCanvasProps) 
     });
     observer.observe(container);
     return () => { observer.disconnect(); if (rafId !== null) cancelAnimationFrame(rafId); };
-  }, [];
+  }, []);
 
   // ── Reset panOffset when zoom returns to 1 ─────────────────────────────────────────────────────────────
   useEffect(() => {

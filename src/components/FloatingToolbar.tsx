@@ -120,6 +120,8 @@ export default function FloatingToolbar({ onToggleNotes }: { onToggleNotes?: () 
     } else {
       if (confirmClearAllTimerRef.current) clearTimeout(confirmClearAllTimerRef.current);
       clearAllAnnotations();
+      // Tell every AnnotationCanvas instance to clear itself immediately (imperative approach)
+      document.dispatchEvent(new CustomEvent('annotation:clear:all'));
       setConfirmClearAll(false);
     }
   };
@@ -344,8 +346,7 @@ export default function FloatingToolbar({ onToggleNotes }: { onToggleNotes?: () 
           icon={<Layout className="w-4 h-4" />}
           label="Add Popup Slide"
           onClick={() => {
-            const vs = currentSession?.slides.filter(s => !s.hidden) || [];
-            const slide = vs[currentSlideIndex];
+            const slide = currentSession?.slides[currentSlideIndex];
             if (slide) useStore.getState().addPopupSlide(slide.id, {});
           }}
         />
@@ -460,7 +461,11 @@ export default function FloatingToolbar({ onToggleNotes }: { onToggleNotes?: () 
               label="Clear This Slide" shortcut="Ctrl+D" danger
               onClick={() => {
                 const slide = slides[currentSlideIndex];
-                if (slide) clearSlideAnnotation(slide.id);
+                if (slide) {
+                  clearSlideAnnotation(slide.id);
+                  // Imperative clear — avoids the isInternalChangeRef race condition
+                  document.dispatchEvent(new CustomEvent('annotation:clear:slide', { detail: { slideId: slide.id } }));
+                }
               }}
             />
             <div className="relative">

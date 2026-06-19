@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, useDragControls } from 'framer-motion';
 import { useStore, PopupSlide } from '../store/useStore';
 import { X, Minus, Trash2, Layout, Image as ImageIcon, ZoomIn, ZoomOut, MoreVertical, Copy, Link, Layers } from 'lucide-react';
-import { cn } from '../utils/cn';
 import { detectMediaType } from '../utils/mediaDetector';
 import AnnotationCanvas from './AnnotationCanvas';
 
@@ -15,6 +14,9 @@ interface SlidePopupProps {
 export default function SlidePopup({ slideId, popup, index }: SlidePopupProps) {
   const { updatePopupSlide, removePopupSlide, duplicateSlide, currentSession, renderedPages } = useStore();
   const currentSlideIndex = useStore(s => s.currentSlideIndex);
+  // Subscribe to currentTool so the popup reacts when drawing tools are selected
+  const currentTool = useStore(s => s.currentTool);
+  const isDrawingTool = currentTool !== 'select' && currentTool !== 'lasso';
   const dragControls = useDragControls();
 
   const [localRect, setLocalRect] = useState({ x: popup.x, y: popup.y, width: popup.width, height: popup.height });
@@ -67,6 +69,9 @@ export default function SlidePopup({ slideId, popup, index }: SlidePopupProps) {
   };
 
   const handleContentPointerDown = (e: React.PointerEvent) => {
+    // Never capture events when a drawing tool is active —
+    // Fabric's canvas handles them and panning must not interfere.
+    if (isDrawingTool) return;
     if (contentZoom <= 1 || !hasContent) return;
     e.preventDefault();
     e.stopPropagation();
@@ -114,7 +119,7 @@ export default function SlidePopup({ slideId, popup, index }: SlidePopupProps) {
     <motion.div
       drag dragControls={dragControls} dragListener={false} dragMomentum={false} initial={false}
       onWheel={(e) => e.stopPropagation()}
-      onDragEnd={(e, info) => {
+      onDragEnd={(_e, info) => {
         updatePopupSlide(slideId, popup.id, { x: localRect.x + info.offset.x, y: localRect.y + info.offset.y });
       }}
       animate={{ x: localRect.x, y: localRect.y }}
@@ -272,7 +277,15 @@ export default function SlidePopup({ slideId, popup, index }: SlidePopupProps) {
           }
         }}
         onPointerDown={handleContentPointerDown}
-        style={{ cursor: isPanningContent ? 'grabbing' : contentZoom > 1 ? 'grab' : 'default' }}
+        style={{
+          cursor: isPanningContent
+            ? 'grabbing'
+            : isDrawingTool
+              ? (currentTool === 'eraser' ? 'cell' : 'crosshair')
+              : contentZoom > 1
+                ? 'grab'
+                : 'default',
+        }}
       >
         <div className="w-full h-full" style={{
           transform: `translate(${contentPan.x}px, ${contentPan.y}px) scale(${contentZoom})`,
@@ -333,8 +346,8 @@ export default function SlidePopup({ slideId, popup, index }: SlidePopupProps) {
                 <iframe 
                   src={detected.embedUrl} 
                   className="w-full h-full border-0 pointer-events-auto" 
-                  allow="autoplay; fullscreen; picture-in-picture" 
-                  allowFullScreen 
+                  allow="autoplay; fullscreen; picture-in-picture"
+                  allowFullScreen
                 />
               );
             })()

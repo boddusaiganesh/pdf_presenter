@@ -10,7 +10,6 @@ export default function PointerOverlay() {
   // Canvas ref for laser trail — drawn imperatively, zero React re-renders per frame
   const trailCanvasRef = useRef<HTMLCanvasElement>(null);
   const trailPointsRef = useRef<TrailPoint[]>([]);
-  const rafRef = useRef<number | null>(null);
 
   const trailLengths = { short: 5, medium: 10, long: 18 };
 

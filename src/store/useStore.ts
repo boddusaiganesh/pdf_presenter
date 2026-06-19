@@ -840,6 +840,7 @@ export const useStore = create<AppStore>()(
             ...s.timer,
             running: true,
             startedAt: Date.now() - s.timer.elapsed * 1000,
+            currentSlideStart: Date.now(),
           },
         })),
       stopTimer: () =>

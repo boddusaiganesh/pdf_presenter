@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import {
   Eye, EyeOff, Trash2, Copy, Plus, GripVertical, Film,
   Image, FileText, X, ChevronRight,
-  Video, Link, Layout, AlignJustify, MoreHorizontal, Play
+  Link, Layout, AlignJustify, MoreHorizontal, Play
 } from 'lucide-react';
 import { useStore, Slide } from '../store/useStore';
 import { cn } from '../utils/cn';

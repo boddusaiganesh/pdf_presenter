@@ -55,7 +55,7 @@ export default function PreflightCheck() {
   const {
     preflightChecks, setPreflightCheck,
     setCurrentScreen, setIsPresenting, isSidePanelOpen, setIsSidePanelOpen,
-    settings, currentSession
+    currentSession
   } = useStore();
 
   const [expandedItem, setExpandedItem] = useState<string | null>(null);

@@ -2,7 +2,7 @@ import React, { useCallback, useRef, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import {
   Upload, FileText, Clock, Trash2, Play, Settings,
-  Plus, FolderOpen, AlertCircle, BookOpen, Zap,
+  Plus, FolderOpen, AlertCircle, Zap,
   Monitor, ChevronRight, Star, Download
 } from 'lucide-react';
 import { useStore } from '../store/useStore';

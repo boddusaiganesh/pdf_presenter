@@ -358,15 +358,52 @@ export default function AnnotationCanvas({ width, height, slideId, popupId }: An
       }));
     };
 
+    // Imperative clear — bypasses the isInternalChangeRef race condition in the reactive effect.
+    // Triggered by FloatingToolbar's "Clear This Slide" and "Clear All" buttons.
+    const handleClearSlide = (e: Event) => {
+      const { slideId: reqSlideId } = (e as CustomEvent).detail || {};
+      // Each canvas instance clears itself if its parent slide matches.
+      // Both the main annotation canvas and any popup canvases on that slide are cleared.
+      if (reqSlideId !== slideIdRef.current) return;
+      const canvas = fabricRef.current;
+      if (!canvas) return;
+      canvas.clear();
+      canvas.backgroundColor = '';
+      canvas.renderAll();
+      const emptyJson = JSON.stringify(canvas.toJSON());
+      historyRef.current = [emptyJson];
+      historyIndexRef.current = 0;
+      // Mark as internal so the reactive effect does not double-clear
+      isInternalChangeRef.current = true;
+      updateAnnotationRef.current(slideIdRef.current, '', popupIdRef.current);
+    };
+
+    const handleClearAll = () => {
+      const canvas = fabricRef.current;
+      if (!canvas) return;
+      canvas.clear();
+      canvas.backgroundColor = '';
+      canvas.renderAll();
+      const emptyJson = JSON.stringify(canvas.toJSON());
+      historyRef.current = [emptyJson];
+      historyIndexRef.current = 0;
+      isInternalChangeRef.current = true;
+      updateAnnotationRef.current(slideIdRef.current, '', popupIdRef.current);
+    };
+
     document.addEventListener('annotation:undo' as any, handleUndo);
     document.addEventListener('annotation:redo' as any, handleRedo);
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('annotation:snapshot' as any, handleSnapshot);
+    document.addEventListener('annotation:clear:slide' as any, handleClearSlide);
+    document.addEventListener('annotation:clear:all' as any, handleClearAll);
     return () => {
       document.removeEventListener('annotation:undo' as any, handleUndo);
       document.removeEventListener('annotation:redo' as any, handleRedo);
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('annotation:snapshot' as any, handleSnapshot);
+      document.removeEventListener('annotation:clear:slide' as any, handleClearSlide);
+      document.removeEventListener('annotation:clear:all' as any, handleClearAll);
     };
   }, []);
 
@@ -434,9 +471,19 @@ export default function AnnotationCanvas({ width, height, slideId, popupId }: An
     canvas.discardActiveObject();
     canvas.forEachObject((obj) => { obj.selectable = false; obj.evented = true; });
 
+    // Helper: immediately update Fabric's upper-canvas cursor so the cursor
+    // changes on tool switch without waiting for the next mousemove event.
+    const setFabricCursor = (cursor: string) => {
+      const el = (canvas as any).upperCanvasEl as HTMLCanvasElement | undefined;
+      if (el) el.style.cursor = cursor;
+      canvas.defaultCursor = cursor;
+    };
+
     switch (currentTool) {
       case 'pen': {
         canvas.isDrawingMode = true;
+        canvas.freeDrawingCursor = 'crosshair';
+        setFabricCursor('crosshair');
         const brush = new PencilBrush(canvas);
         const r = parseInt(drawColor.slice(1, 3), 16) || 0;
         const g = parseInt(drawColor.slice(3, 5), 16) || 0;
@@ -449,6 +496,8 @@ export default function AnnotationCanvas({ width, height, slideId, popupId }: An
       }
       case 'highlighter': {
         canvas.isDrawingMode = true;
+        canvas.freeDrawingCursor = 'crosshair';
+        setFabricCursor('crosshair');
         const hBrush = new PencilBrush(canvas);
         const r = parseInt(drawColor.slice(1, 3), 16) || 0;
         const g = parseInt(drawColor.slice(3, 5), 16) || 0;
@@ -461,20 +510,21 @@ export default function AnnotationCanvas({ width, height, slideId, popupId }: An
       case 'eraser':
         canvas.isDrawingMode = false;
         canvas.selection = false;
-        canvas.defaultCursor = 'cell';
+        setFabricCursor('cell');
         (canvas as any).hoverCursor = 'cell';
         break;
       case 'select':
       case 'lasso':
         canvas.isDrawingMode = false;
         canvas.selection = true;
-        canvas.defaultCursor = 'default';
+        setFabricCursor('default');
         (canvas as any).hoverCursor = 'move';
         canvas.forEachObject((obj) => { obj.selectable = true; });
         break;
       default:
         canvas.isDrawingMode = false;
         canvas.selection = false;
+        setFabricCursor('crosshair');
     }
     canvas.renderAll();
   }, [currentTool, drawColor, drawSize, drawOpacity, isDashedStroke]);

@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  Play, Home, Plus,
-  Settings, BookOpen, ChevronRight, ChevronDown,
-  FileText, Clock, Maximize
+  Play, Home, Plus, BookOpen,
+  ChevronRight, ChevronDown,
+  Maximize
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import SidePanel from './SidePanel';
@@ -18,17 +18,17 @@ import toast from 'react-hot-toast';
 export default function EditorView() {
   const {
     currentSession, setCurrentScreen, saveCurrentSession,
-    showSettings, setShowSettings, settings, updateSettings,
+    showSettings, settings, updateSettings,
     currentSlideIndex, setCurrentSlideIndex,
     isToolbarVisible, setIsToolbarVisible,
     isSidePanelOpen, setIsSidePanelOpen,
     pointerMode, setPointerMode, setPointerPosition,
-    currentTool, setCurrentTool,
+    setCurrentTool,
     isBlackScreen, setIsBlackScreen,
     isFrozen, setIsFrozen,
     isOverviewMode, setIsOverviewMode,
     zoomLevel, setZoomLevel,
-    timer, startTimer, pauseTimer, resetTimer,
+    timer, startTimer, pauseTimer,
     lastAutoSave, setLastAutoSave,
     clearSlideAnnotation, clearAllAnnotations,
     setPreflightCheck,
