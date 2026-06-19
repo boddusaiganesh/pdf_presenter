@@ -269,54 +269,50 @@ export default function FloatingToolbar({ onToggleNotes }: { onToggleNotes?: () 
         <Divider />
 
         {/* Draw Tools trigger — portal popup */}
-        <Tooltip.Provider delayDuration={300}>
-          <Tooltip.Root>
-            <Tooltip.Trigger asChild>
-              <button
-                ref={drawBtnRef}
-                onClick={openDraw}
-                className={cn(
-                  'w-9 h-9 shrink-0 rounded-lg flex items-center justify-center transition-all duration-150 cursor-pointer',
-                  (activeSection === 'draw' || ['pen', 'highlighter', 'line', 'arrow', 'rectangle', 'circle', 'triangle', 'text', 'sticky', 'eraser', 'lasso'].includes(currentTool))
-                    ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30'
-                    : 'text-white/60 hover:text-white hover:bg-white/[0.08]'
-                )}
-              >
-                <Pen className="w-4 h-4" />
-              </button>
-            </Tooltip.Trigger>
-            <Tooltip.Portal>
-              <Tooltip.Content className="bg-black/90 text-white px-2.5 py-1.5 rounded-lg text-xs whitespace-nowrap shadow-xl z-[99999] animate-fade-in" sideOffset={8}>
-                Drawing Tools
-              </Tooltip.Content>
-            </Tooltip.Portal>
-          </Tooltip.Root>
-        </Tooltip.Provider>
+        <Tooltip.Root>
+          <Tooltip.Trigger asChild>
+            <button
+              ref={drawBtnRef}
+              onClick={openDraw}
+              className={cn(
+                'w-9 h-9 shrink-0 rounded-lg flex items-center justify-center transition-all duration-150 cursor-pointer',
+                (activeSection === 'draw' || ['pen', 'highlighter', 'line', 'arrow', 'rectangle', 'circle', 'triangle', 'text', 'sticky', 'eraser', 'lasso'].includes(currentTool))
+                  ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30'
+                  : 'text-white/60 hover:text-white hover:bg-white/[0.08]'
+              )}
+            >
+              <Pen className="w-4 h-4" />
+            </button>
+          </Tooltip.Trigger>
+          <Tooltip.Portal>
+            <Tooltip.Content className="bg-black/90 text-white px-2.5 py-1.5 rounded-lg text-xs whitespace-nowrap shadow-xl z-[99999] animate-fade-in" sideOffset={8}>
+              Drawing Tools
+            </Tooltip.Content>
+          </Tooltip.Portal>
+        </Tooltip.Root>
 
         {/* Pointer Mode trigger — portal popup */}
-        <Tooltip.Provider delayDuration={300}>
-          <Tooltip.Root>
-            <Tooltip.Trigger asChild>
-              <button
-                ref={pointerBtnRef}
-                onClick={openPointer}
-                className={cn(
-                  'w-9 h-9 shrink-0 rounded-lg flex items-center justify-center transition-all duration-150 cursor-pointer',
-                  (activeSection === 'pointer' || pointerMode !== 'normal')
-                    ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30'
-                    : 'text-white/60 hover:text-white hover:bg-white/[0.08]'
-                )}
-              >
-                <Zap className="w-4 h-4" />
-              </button>
-            </Tooltip.Trigger>
-            <Tooltip.Portal>
-              <Tooltip.Content className="bg-black/90 text-white px-2.5 py-1.5 rounded-lg text-xs whitespace-nowrap shadow-xl z-[99999] animate-fade-in" sideOffset={8}>
-                Pointer Modes
-              </Tooltip.Content>
-            </Tooltip.Portal>
-          </Tooltip.Root>
-        </Tooltip.Provider>
+        <Tooltip.Root>
+          <Tooltip.Trigger asChild>
+            <button
+              ref={pointerBtnRef}
+              onClick={openPointer}
+              className={cn(
+                'w-9 h-9 shrink-0 rounded-lg flex items-center justify-center transition-all duration-150 cursor-pointer',
+                (activeSection === 'pointer' || pointerMode !== 'normal')
+                  ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30'
+                  : 'text-white/60 hover:text-white hover:bg-white/[0.08]'
+              )}
+            >
+              <Zap className="w-4 h-4" />
+            </button>
+          </Tooltip.Trigger>
+          <Tooltip.Portal>
+            <Tooltip.Content className="bg-black/90 text-white px-2.5 py-1.5 rounded-lg text-xs whitespace-nowrap shadow-xl z-[99999] animate-fade-in" sideOffset={8}>
+              Pointer Modes
+            </Tooltip.Content>
+          </Tooltip.Portal>
+        </Tooltip.Root>
 
         <Divider />
 
