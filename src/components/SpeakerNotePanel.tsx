@@ -17,12 +17,16 @@ export default function SpeakerNotePanel({ onClose }: SpeakerNotePanelProps) {
     setContent(currentSlide?.note.content || '');
   }, [currentSlideIndex, currentSlide?.note.content]);
 
-  // Debounce note saves — prevents a Zustand state update + full re-render on every keystroke
+  // Debounce note saves — capture slideId at call time so fast navigation
+  // never saves content to the wrong slide.
   const handleChange = (value: string) => {
     setContent(value);
+    // Capture the ID now — not inside the timeout closure
+    const slideId = currentSlide?.id;
+    if (!slideId) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      if (currentSlide) updateNote(currentSlide.id, value);
+      updateNote(slideId, value);
     }, 300);
   };
 
