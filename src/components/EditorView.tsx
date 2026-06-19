@@ -169,10 +169,12 @@ export default function EditorView() {
     }
   }, [
     currentSlideIndex, slides, isBlackScreen, isFrozen,
-    pointerMode, isOverviewMode, zoomLevel,
+    pointerMode, isOverviewMode, zoomLevel, isSidePanelOpen,
+    timer,
     setCurrentSlideIndex, setIsBlackScreen, setIsFrozen,
     setPointerMode, setCurrentTool, setIsOverviewMode,
-    setZoomLevel, saveCurrentSession,
+    setZoomLevel, setIsSidePanelOpen, saveCurrentSession,
+    startTimer, pauseTimer,
     clearSlideAnnotation, clearAllAnnotations
   ]);
 
