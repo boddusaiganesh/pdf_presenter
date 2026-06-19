@@ -235,6 +235,7 @@ export default function FloatingToolbar({ onToggleNotes }: { onToggleNotes?: () 
   ];
 
   return (
+    <Tooltip.Provider delayDuration={300}>
     <>
       {/* Main Toolbar — horizontally scrollable with a sleek scrollbar */}
       <div className="flex items-center gap-1 px-3 py-2 rounded-2xl glass border border-white/[0.1] shadow-2xl shadow-black/50 select-none max-w-[95vw] overflow-x-auto custom-scrollbar">
