@@ -5,6 +5,7 @@ import FloatingToolbar from './FloatingToolbar';
 import PointerOverlay from './PointerOverlay';
 import SettingsPanel from './SettingsPanel';
 import { cn } from '../utils/cn';
+import toast from 'react-hot-toast';
 
 export default function PresentingView() {
   const {
