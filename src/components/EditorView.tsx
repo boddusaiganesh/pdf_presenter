@@ -127,11 +127,39 @@ export default function EditorView() {
       case 'D':
         if (ctrl && e.shiftKey) {
           e.preventDefault();
-          clearAllAnnotations(); // No window.confirm — use toolbar two-step confirm instead
+          clearAllAnnotations();
         } else if (ctrl) {
           e.preventDefault();
           const slide = slides[currentSlideIndex];
           if (slide) clearSlideAnnotation(slide.id);
+        }
+        break;
+      case 's':
+      case 'S':
+        if (ctrl) {
+          e.preventDefault();
+          saveCurrentSession();
+          toast.success('Session saved');
+        } else {
+          setPointerMode(pointerMode === 'spotlight' ? 'normal' : 'spotlight');
+        }
+        break;
+      case 'p':
+      case 'P':
+        if (ctrl) {
+          e.preventDefault();
+          setIsSidePanelOpen(!isSidePanelOpen);
+        } else {
+          setCurrentTool('pen');
+        }
+        break;
+      case 't':
+      case 'T':
+        if (ctrl) {
+          e.preventDefault();
+          if (timer.running) pauseTimer(); else startTimer();
+        } else {
+          setCurrentTool('text');
         }
         break;
       case '+':
