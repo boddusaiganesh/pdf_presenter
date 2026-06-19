@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useStore } from '../store/useStore';
 import { renderPage } from '../utils/pdfRenderer';
-import { detectMediaType, isVideoType } from '../utils/mediaDetector';
+import { detectMediaType } from '../utils/mediaDetector';
 import AnnotationCanvas from './AnnotationCanvas';
 import SlidePopup from './SlidePopup';
 import html2canvas from 'html2canvas';
