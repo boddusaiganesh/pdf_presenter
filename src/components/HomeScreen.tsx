@@ -339,7 +339,7 @@ export default function HomeScreen() {
                       <div className="flex items-center gap-3 text-white/30 text-xs">
                         <span className="flex items-center gap-1">
                           <FileText className="w-3 h-3" />
-                          {session.totalPages + (session.slides?.length - session.totalPages || 0)} slides
+                          {session.slides?.length ?? session.totalPages} slides
                         </span>
                         <span className="flex items-center gap-1">
                           <Clock className="w-3 h-3" />
