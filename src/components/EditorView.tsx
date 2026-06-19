@@ -95,14 +95,6 @@ export default function EditorView() {
       case 'L':
         if (!ctrl) setPointerMode(pointerMode === 'laser' ? 'normal' : 'laser');
         break;
-      case 's':
-      case 'S':
-        if (!ctrl) setPointerMode(pointerMode === 'spotlight' ? 'normal' : 'spotlight');
-        break;
-      case 'p':
-      case 'P':
-        if (!ctrl) setCurrentTool('pen');
-        break;
       case 'h':
       case 'H':
         if (!ctrl) setCurrentTool('highlighter');
@@ -110,10 +102,6 @@ export default function EditorView() {
       case 'e':
       case 'E':
         if (!ctrl) setCurrentTool('eraser');
-        break;
-      case 't':
-      case 'T':
-        if (!ctrl) setCurrentTool('text');
         break;
       case 'v':
       case 'V':
