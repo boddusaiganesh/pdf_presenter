@@ -563,8 +563,8 @@ export const useStore = create<AppStore>()(
           const slides = s.currentSession.slides.map((slide) => {
             if (slide.id !== slideId) return slide;
             if (popupId) {
-              const popups = slide.popups?.map(p => 
-                p.id === popupId 
+              const popups = slide.popups?.map(p =>
+                p.id === popupId
                   ? { ...p, annotation: { id: p.id, visible: true, locked: false, ...(p.annotation || {}), fabricJSON } }
                   : p
               );
@@ -572,11 +572,9 @@ export const useStore = create<AppStore>()(
             }
             return { ...slide, annotation: { ...slide.annotation, fabricJSON } };
           });
-          const updated = { ...s.currentSession, slides };
-          return {
-            currentSession: updated,
-            sessions: s.sessions.map((sess) => (sess.id === updated.id ? updated : sess)),
-          };
+          // Only update currentSession during active drawing — sessions array is
+          // synced on saveCurrentSession() to avoid O(n) map on every stroke.
+          return { currentSession: { ...s.currentSession, slides } };
         });
       },
 
