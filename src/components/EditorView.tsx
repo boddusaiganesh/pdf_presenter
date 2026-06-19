@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  Save, Play, Home, Plus, Film, Download,
-  Settings, BookOpen, ChevronRight, ChevronDown, Keyboard,
-  FileText, Zap, AlertTriangle, Clock, Maximize
+  Play, Home, Plus,
+  Settings, BookOpen, ChevronRight, ChevronDown,
+  FileText, Clock, Maximize
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import SidePanel from './SidePanel';
