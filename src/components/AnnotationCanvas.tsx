@@ -271,6 +271,9 @@ export default function AnnotationCanvas({ width, height, slideId, popupId }: An
           canvas.remove(shape);
           const group = new Group([shape, arrowHead], { selectable: true, evented: true });
           canvas.add(group);
+          // object:added is not listened to (causes loops on loadFromJSON),
+          // so we must explicitly save after adding the arrow group.
+          saveState();
         }
 
         currentShapeRef.current = null;
