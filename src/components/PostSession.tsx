@@ -9,6 +9,29 @@ import { cn } from '../utils/cn';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 
+// Collect PNG snapshots from all mounted AnnotationCanvas instances via custom events.
+// Each canvas listens for 'annotation:snapshot' and responds with 'annotation:snapshot:result'.
+async function collectFabricSnapshots(slideIds: string[]): Promise<Record<string, string>> {
+  const results: Record<string, string> = {};
+  for (const slideId of slideIds) {
+    await new Promise<void>((resolve) => {
+      const timeout = setTimeout(resolve, 120); // skip if canvas not mounted
+      const handler = (e: Event) => {
+        const { slideId: sid, png } = (e as CustomEvent).detail || {};
+        if (sid === slideId && png) {
+          results[slideId] = png;
+          clearTimeout(timeout);
+          document.removeEventListener('annotation:snapshot:result' as any, handler);
+          resolve();
+        }
+      };
+      document.addEventListener('annotation:snapshot:result' as any, handler);
+      document.dispatchEvent(new CustomEvent('annotation:snapshot', { detail: { slideId } }));
+    });
+  }
+  return results;
+}
+
 export default function PostSession() {
   const {
     currentSession, postSessionStats, setCurrentScreen,
@@ -57,7 +80,11 @@ export default function PostSession() {
       icon: <FileText className="w-5 h-5" />,
       color: 'from-indigo-500/20 to-blue-500/10 border-indigo-500/30',
       iconColor: 'text-indigo-400',
-      action: () => exportAnnotatedPDF(currentSession, renderedPages, {}, true),
+      action: async () => {
+        const slideIds = currentSession.slides.filter(s => !s.hidden).map(s => s.id);
+        const fabricCanvases = await collectFabricSnapshots(slideIds);
+        return exportAnnotatedPDF(currentSession, renderedPages, fabricCanvases, true);
+      },
       recommended: true,
     },
     {
@@ -76,7 +103,11 @@ export default function PostSession() {
       icon: <Image className="w-5 h-5" />,
       color: 'from-violet-500/20 to-purple-500/10 border-violet-500/30',
       iconColor: 'text-violet-400',
-      action: () => exportAllSlidesAsZip(currentSession, renderedPages, {}),
+      action: async () => {
+        const slideIds = currentSession.slides.filter(s => !s.hidden).map(s => s.id);
+        const fabricCanvases = await collectFabricSnapshots(slideIds);
+        return exportAllSlidesAsZip(currentSession, renderedPages, fabricCanvases);
+      },
     },
     {
       id: 'notes',

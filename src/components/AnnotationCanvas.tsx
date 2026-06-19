@@ -271,6 +271,9 @@ export default function AnnotationCanvas({ width, height, slideId, popupId }: An
           canvas.remove(shape);
           const group = new Group([shape, arrowHead], { selectable: true, evented: true });
           canvas.add(group);
+          // object:added is not listened to (causes loops on loadFromJSON),
+          // so we must explicitly save after adding the arrow group.
+          saveState();
         }
 
         currentShapeRef.current = null;
@@ -338,13 +341,29 @@ export default function AnnotationCanvas({ width, height, slideId, popupId }: An
       else if (ctrl && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); handleRedo(); }
     };
 
+    // Snapshot request — PostSession fires this to collect canvas PNGs for export
+    const handleSnapshot = (e: Event) => {
+      const { slideId: reqSlideId, popupId: reqPopupId } = (e as CustomEvent).detail || {};
+      // Only respond if this canvas instance matches the requested slide (and popup)
+      if (reqSlideId !== slideIdRef.current) return;
+      if (reqPopupId !== undefined && reqPopupId !== popupIdRef.current) return;
+      const canvas = fabricRef.current;
+      if (!canvas) return;
+      const png = canvas.toDataURL({ format: 'png', multiplier: 1 });
+      document.dispatchEvent(new CustomEvent('annotation:snapshot:result', {
+        detail: { slideId: slideIdRef.current, popupId: popupIdRef.current, png },
+      }));
+    };
+
     document.addEventListener('annotation:undo' as any, handleUndo);
     document.addEventListener('annotation:redo' as any, handleRedo);
     document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('annotation:snapshot' as any, handleSnapshot);
     return () => {
       document.removeEventListener('annotation:undo' as any, handleUndo);
       document.removeEventListener('annotation:redo' as any, handleRedo);
       document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('annotation:snapshot' as any, handleSnapshot);
     };
   }, []);
 
@@ -387,7 +406,8 @@ export default function AnnotationCanvas({ width, height, slideId, popupId }: An
       historyRef.current = [JSON.stringify(canvas.toJSON())];
       historyIndexRef.current = 0;
     }
-  }, [slideId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slideId, popupId]);
 
   useEffect(() => {
     if (!fabricRef.current) return;

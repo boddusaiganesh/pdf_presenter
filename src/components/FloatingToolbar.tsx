@@ -143,29 +143,38 @@ export default function FloatingToolbar({ onToggleNotes }: { onToggleNotes?: () 
   const [pointerPos, setPointerPos] = useState({ x: 0, y: 0 });
   const [timerPos, setTimerPos] = useState({ x: 0, y: 0 });
 
-  // Compute center-above-button position in viewport px
+  // Compute center-above-button position in viewport px.
+  // Returns { x: left px from viewport left, y: bottom px from viewport bottom } — both positive.
   const getPopupPos = useCallback((ref: React.RefObject<HTMLButtonElement | null>, popupWidth = 320) => {
-    if (!ref.current) return { x: 0, y: 0 };
+    if (!ref.current) return { x: 8, y: 80 };
     const r = ref.current.getBoundingClientRect();
     const centerX = r.left + r.width / 2;
     const left = Math.round(centerX - popupWidth / 2);
-    const bottom = Math.round(window.innerHeight - r.top + 12);
-    return { x: Math.max(8, Math.min(left, window.innerWidth - popupWidth - 8)), y: -bottom };
+    // Distance from the bottom of the viewport to the top of the button, plus gap
+    const bottomFromViewport = Math.round(window.innerHeight - r.top + 12);
+    return {
+      x: Math.max(8, Math.min(left, window.innerWidth - popupWidth - 8)),
+      // Store as positive number; panels use `bottom: y` in their style
+      y: Math.max(60, bottomFromViewport),
+    };
   }, []);
 
   const openDraw = () => {
     if (activeSection === 'draw') { setActiveSection(null); return; }
-    setDrawPos(getPopupPos(drawBtnRef, 340));
+    const pos = getPopupPos(drawBtnRef, 340);
+    setDrawPos(pos);
     setActiveSection('draw');
   };
   const openPointer = () => {
     if (activeSection === 'pointer') { setActiveSection(null); return; }
-    setPointerPos(getPopupPos(pointerBtnRef, 340));
+    const pos = getPopupPos(pointerBtnRef, 340);
+    setPointerPos(pos);
     setActiveSection('pointer');
   };
   const openTimer = () => {
     if (showTimerPanel) { setShowTimerPanel(false); return; }
-    setTimerPos(getPopupPos(timerBtnRef, 224));
+    const pos = getPopupPos(timerBtnRef, 224);
+    setTimerPos(pos);
     setShowTimerPanel(true);
   };
 
@@ -394,7 +403,7 @@ export default function FloatingToolbar({ onToggleNotes }: { onToggleNotes?: () 
             setDrawPos(prev => ({ x: prev.x + info.offset.x, y: prev.y + info.offset.y }));
           }}
           className="fixed glass rounded-2xl p-3 shadow-2xl border border-white/[0.08] animate-fade-in flex flex-col gap-1"
-          style={{ left: drawPos.x, bottom: -drawPos.y, zIndex: 9990 }}
+          style={{ left: drawPos.x, bottom: drawPos.y, zIndex: 9990 }}
         >
           {/* Drag Handle */}
           <div
@@ -490,7 +499,7 @@ export default function FloatingToolbar({ onToggleNotes }: { onToggleNotes?: () 
             setPointerPos(prev => ({ x: prev.x + info.offset.x, y: prev.y + info.offset.y }));
           }}
           className="fixed glass rounded-2xl p-3 shadow-2xl border border-white/[0.08] animate-fade-in flex flex-col gap-1"
-          style={{ left: pointerPos.x, bottom: -pointerPos.y, zIndex: 9990 }}
+          style={{ left: pointerPos.x, bottom: pointerPos.y, zIndex: 9990 }}
         >
           {/* Drag Handle */}
           <div
@@ -559,7 +568,7 @@ export default function FloatingToolbar({ onToggleNotes }: { onToggleNotes?: () 
       {showTimerPanel && createPortal(
         <div
           className="fixed glass rounded-2xl p-4 shadow-2xl border border-white/[0.08] animate-fade-in w-56"
-          style={{ left: timerPos.x, bottom: -timerPos.y, zIndex: 9990 }}
+          style={{ left: timerPos.x, bottom: timerPos.y, zIndex: 9990 }}
         >
           <div className="flex items-center justify-between mb-3">
             <span className="text-white/60 text-xs font-semibold uppercase tracking-wider">Timer</span>

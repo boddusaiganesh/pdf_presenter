@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, useDragControls } from 'framer-motion';
 import { useStore, PopupSlide } from '../store/useStore';
-import { X, Minus, Trash2, Layout, Image as ImageIcon, ZoomIn, ZoomOut, MoreVertical, Copy, Link } from 'lucide-react';
+import { X, Minus, Trash2, Layout, Image as ImageIcon, ZoomIn, ZoomOut, MoreVertical, Copy, Link, Layers } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { detectMediaType } from '../utils/mediaDetector';
 import AnnotationCanvas from './AnnotationCanvas';
@@ -13,7 +13,8 @@ interface SlidePopupProps {
 }
 
 export default function SlidePopup({ slideId, popup, index }: SlidePopupProps) {
-  const { updatePopupSlide, removePopupSlide, currentSession, renderedPages } = useStore();
+  const { updatePopupSlide, removePopupSlide, duplicateSlide, currentSession, renderedPages } = useStore();
+  const currentSlideIndex = useStore(s => s.currentSlideIndex);
   const dragControls = useDragControls();
 
   const [localRect, setLocalRect] = useState({ x: popup.x, y: popup.y, width: popup.width, height: popup.height });
@@ -139,8 +140,23 @@ export default function SlidePopup({ slideId, popup, index }: SlidePopupProps) {
           {showMenu && (
             <div className="absolute top-full right-0 mt-1 w-52 bg-[#1a1d27] border border-white/10 shadow-2xl rounded-lg py-1 z-[60] pointer-events-auto">
               <button className="w-full text-left px-3 py-2 text-xs text-white/70 hover:text-white hover:bg-white/5 flex items-center gap-2"
-                onClick={() => { updatePopupSlide(slideId, popup.id, { targetSlideId: slideId, mediaType: undefined, mediaUrl: undefined }); setShowMenu(false); }}>
-                <Copy className="w-3.5 h-3.5" /> Duplicate Slide
+                onClick={() => {
+                  // Mirror: show the current slide inside the popup
+                  const slides = currentSession?.slides || [];
+                  const currentSlide = slides[currentSlideIndex];
+                  if (currentSlide) {
+                    updatePopupSlide(slideId, popup.id, { targetSlideId: currentSlide.id, mediaType: undefined, mediaUrl: undefined });
+                  }
+                  setShowMenu(false);
+                }}>
+                <Copy className="w-3.5 h-3.5" /> Mirror Current Slide
+              </button>
+              <button className="w-full text-left px-3 py-2 text-xs text-white/70 hover:text-white hover:bg-white/5 flex items-center gap-2"
+                onClick={() => {
+                  duplicateSlide(currentSlideIndex);
+                  setShowMenu(false);
+                }}>
+                <Layers className="w-3.5 h-3.5" /> Duplicate to New Slide
               </button>
               <button className="w-full text-left px-3 py-2 text-xs text-white/70 hover:text-white hover:bg-white/5 flex items-center gap-2"
                 onClick={() => { updatePopupSlide(slideId, popup.id, { mediaType: 'blank-white', targetSlideId: undefined }); setShowMenu(false); }}>

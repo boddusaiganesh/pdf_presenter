@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  Save, Play, Home, Plus, Film, Download,
-  Settings, BookOpen, ChevronRight, ChevronDown, Keyboard,
-  FileText, Zap, AlertTriangle, Clock, Maximize
+  Play, Home, Plus,
+  Settings, BookOpen, ChevronRight, ChevronDown,
+  FileText, Clock, Maximize
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import SidePanel from './SidePanel';
@@ -33,7 +33,7 @@ export default function EditorView() {
     lastAutoSave, setLastAutoSave,
     clearSlideAnnotation, clearAllAnnotations,
     setPreflightCheck,
-    isMediaPanelOpen, openMediaPanel, closeMediaPanel, mediaPanelInsertIndex
+    isMediaPanelOpen, openMediaPanel, closeMediaPanel, mediaPanelInsertIndex,
   } = useStore();
 
   const [showNotePanel, setShowNotePanel] = useState(false);
@@ -95,14 +95,6 @@ export default function EditorView() {
       case 'L':
         if (!ctrl) setPointerMode(pointerMode === 'laser' ? 'normal' : 'laser');
         break;
-      case 's':
-      case 'S':
-        if (!ctrl) setPointerMode(pointerMode === 'spotlight' ? 'normal' : 'spotlight');
-        break;
-      case 'p':
-      case 'P':
-        if (!ctrl) setCurrentTool('pen');
-        break;
       case 'h':
       case 'H':
         if (!ctrl) setCurrentTool('highlighter');
@@ -110,10 +102,6 @@ export default function EditorView() {
       case 'e':
       case 'E':
         if (!ctrl) setCurrentTool('eraser');
-        break;
-      case 't':
-      case 'T':
-        if (!ctrl) setCurrentTool('text');
         break;
       case 'v':
       case 'V':
@@ -127,11 +115,39 @@ export default function EditorView() {
       case 'D':
         if (ctrl && e.shiftKey) {
           e.preventDefault();
-          clearAllAnnotations(); // No window.confirm — use toolbar two-step confirm instead
+          clearAllAnnotations();
         } else if (ctrl) {
           e.preventDefault();
           const slide = slides[currentSlideIndex];
           if (slide) clearSlideAnnotation(slide.id);
+        }
+        break;
+      case 's':
+      case 'S':
+        if (ctrl) {
+          e.preventDefault();
+          saveCurrentSession();
+          toast.success('Session saved');
+        } else {
+          setPointerMode(pointerMode === 'spotlight' ? 'normal' : 'spotlight');
+        }
+        break;
+      case 'p':
+      case 'P':
+        if (ctrl) {
+          e.preventDefault();
+          setIsSidePanelOpen(!isSidePanelOpen);
+        } else {
+          setCurrentTool('pen');
+        }
+        break;
+      case 't':
+      case 'T':
+        if (ctrl) {
+          e.preventDefault();
+          if (timer.running) pauseTimer(); else startTimer();
+        } else {
+          setCurrentTool('text');
         }
         break;
       case '+':
@@ -153,10 +169,12 @@ export default function EditorView() {
     }
   }, [
     currentSlideIndex, slides, isBlackScreen, isFrozen,
-    pointerMode, isOverviewMode, zoomLevel,
+    pointerMode, isOverviewMode, zoomLevel, isSidePanelOpen,
+    timer,
     setCurrentSlideIndex, setIsBlackScreen, setIsFrozen,
     setPointerMode, setCurrentTool, setIsOverviewMode,
-    setZoomLevel, saveCurrentSession,
+    setZoomLevel, setIsSidePanelOpen, saveCurrentSession,
+    startTimer, pauseTimer,
     clearSlideAnnotation, clearAllAnnotations
   ]);
 

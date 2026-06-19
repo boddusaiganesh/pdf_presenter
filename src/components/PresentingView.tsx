@@ -5,6 +5,8 @@ import FloatingToolbar from './FloatingToolbar';
 import PointerOverlay from './PointerOverlay';
 import SettingsPanel from './SettingsPanel';
 import { cn } from '../utils/cn';
+import toast from 'react-hot-toast';
+import { X } from 'lucide-react';
 
 export default function PresentingView() {
   const {
@@ -19,6 +21,8 @@ export default function PresentingView() {
     zoomLevel, setZoomLevel,
     settings, showSettings,
     clearSlideAnnotation, clearAllAnnotations,
+    saveCurrentSession,
+    timer, startTimer, pauseTimer,
   } = useStore();
 
   const toolbarTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -38,7 +42,7 @@ export default function PresentingView() {
   // Keyboard shortcuts
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
-    if (tag === 'input' || tag === 'textarea') return;
+    if (tag === 'input' || tag === 'textarea' || (e.target as HTMLElement)?.contentEditable === 'true') return;
 
     const ctrl = e.ctrlKey || e.metaKey;
 
@@ -74,11 +78,22 @@ export default function PresentingView() {
         break;
       case 's':
       case 'S':
-        if (!ctrl) setPointerMode(pointerMode === 'spotlight' ? 'normal' : 'spotlight');
+        if (ctrl) {
+          e.preventDefault();
+          saveCurrentSession();
+          toast.success('Session saved');
+        } else {
+          setPointerMode(pointerMode === 'spotlight' ? 'normal' : 'spotlight');
+        }
         break;
       case 'p':
       case 'P':
-        if (!ctrl) setCurrentTool('pen');
+        if (ctrl) {
+          e.preventDefault();
+          setIsSidePanelOpen(!isSidePanelOpen);
+        } else {
+          setCurrentTool('pen');
+        }
         break;
       case 'h':
       case 'H':
@@ -90,7 +105,12 @@ export default function PresentingView() {
         break;
       case 't':
       case 'T':
-        if (!ctrl) setCurrentTool('text');
+        if (ctrl) {
+          e.preventDefault();
+          if (timer.running) pauseTimer(); else startTimer();
+        } else {
+          setCurrentTool('text');
+        }
         break;
       case 'v':
       case 'V':
@@ -101,9 +121,10 @@ export default function PresentingView() {
         if (!ctrl) setIsOverviewMode(!isOverviewMode);
         break;
       case 'd':
+      case 'D':
         if (ctrl && e.shiftKey) {
           e.preventDefault();
-          clearAllAnnotations(); // No window.confirm
+          clearAllAnnotations();
         } else if (ctrl) {
           e.preventDefault();
           const slide = slides[currentSlideIndex];
@@ -120,19 +141,27 @@ export default function PresentingView() {
       case '0':
         if (ctrl) { e.preventDefault(); setZoomLevel(1); }
         break;
-      case 'Escape':
+      case 'Escape': {
+        const hadOverlay = isOverviewMode || isBlackScreen || pointerMode !== 'normal' || currentTool !== 'select';
         setIsOverviewMode(false);
         if (isBlackScreen) setIsBlackScreen(false);
         if (pointerMode !== 'normal') setPointerMode('normal');
         if (currentTool !== 'select') setCurrentTool('select');
+        // If nothing was active, Escape acts as "exit presenting" so user is never trapped
+        if (!hadOverlay) {
+          useStore.getState().setCurrentScreen('editor');
+        }
         break;
+      }
     }
   }, [
     currentSlideIndex, slides, isBlackScreen, isFrozen,
     pointerMode, isOverviewMode, zoomLevel, currentTool,
+    isSidePanelOpen, timer,
     setCurrentSlideIndex, setIsBlackScreen, setIsFrozen,
     setPointerMode, setCurrentTool, setIsOverviewMode,
     setIsSidePanelOpen, setZoomLevel,
+    saveCurrentSession, startTimer, pauseTimer,
     clearSlideAnnotation, clearAllAnnotations,
   ]);
 
@@ -207,6 +236,15 @@ export default function PresentingView() {
       >
         <FloatingToolbar />
       </div>
+
+      {/* Always-visible exit button — ensures user can never be trapped in PresentingView */}
+      <button
+        onClick={() => useStore.getState().setCurrentScreen('editor')}
+        className="fixed top-3 right-3 z-[9998] w-8 h-8 rounded-lg bg-black/40 border border-white/10 flex items-center justify-center text-white/30 hover:text-white hover:bg-black/70 transition-all"
+        title="Exit Presenting (Esc)"
+      >
+        <X className="w-4 h-4" />
+      </button>
 
       {showSettings && <SettingsPanel />}
     </div>

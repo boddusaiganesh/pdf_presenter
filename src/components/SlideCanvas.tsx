@@ -73,16 +73,48 @@ export default function SlideCanvas({ isPresenting = false }: SlideCanvasProps) 
   // ── Freeze canvas ─────────────────────────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (isFrozen && !previousIsFrozen.current) {
-      if (canvasContainerRef.current) {
-        html2canvas(canvasContainerRef.current, { backgroundColor: null, useCORS: true })
-          .then(canvas => setFrozenImage(canvas.toDataURL('image/png')))
-          .catch(err => console.error('Failed to freeze canvas:', err));
-      }
+      const container = canvasContainerRef.current;
+      if (!container) { previousIsFrozen.current = isFrozen; return; }
+      // html2canvas throws CORS errors on cross-origin iframes (YouTube, Vimeo, etc.).
+      // Ignore iframes during capture; fall back to rendering only the PDF/image layer.
+      html2canvas(container, {
+        backgroundColor: '#0a0b0f',
+        useCORS: true,
+        allowTaint: false,
+        ignoreElements: (el) => el.tagName === 'IFRAME',
+      })
+        .then(canvas => setFrozenImage(canvas.toDataURL('image/png')))
+        .catch(() => {
+          // Last-resort fallback: draw the rendered PDF page directly onto a blank canvas
+          const state = useStore.getState();
+          const slide = state.currentSession?.slides[state.currentSlideIndex];
+          const fallbackCanvas = document.createElement('canvas');
+          fallbackCanvas.width = canvasSize.width;
+          fallbackCanvas.height = canvasSize.height;
+          const ctx = fallbackCanvas.getContext('2d');
+          if (!ctx) return;
+          ctx.fillStyle = '#0a0b0f';
+          ctx.fillRect(0, 0, fallbackCanvas.width, fallbackCanvas.height);
+          if (slide?.type === 'pdf' && slide.pdfPageIndex !== undefined) {
+            const imgSrc = state.renderedPages[slide.pdfPageIndex];
+            if (imgSrc) {
+              const img = new Image();
+              img.onload = () => {
+                ctx.drawImage(img, 0, 0, fallbackCanvas.width, fallbackCanvas.height);
+                setFrozenImage(fallbackCanvas.toDataURL('image/png'));
+              };
+              img.src = imgSrc;
+              return;
+            }
+          }
+          setFrozenImage(fallbackCanvas.toDataURL('image/png'));
+        });
     } else if (!isFrozen && previousIsFrozen.current) {
       setFrozenImage(null);
     }
     previousIsFrozen.current = isFrozen;
-  }, [isFrozen]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFrozen, canvasSize.width, canvasSize.height]);
 
   // ── Render PDF pages in background ───────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -116,7 +148,9 @@ export default function SlideCanvas({ isPresenting = false }: SlideCanvasProps) 
     const renderNext = async (index: number) => {
       if (index >= pagesToRender.length) return;
       const pageIndex = pagesToRender[index];
-      if (renderingPages.includes(pageIndex)) {
+      // Read fresh state from the store — avoids stale closure on renderingPages
+      const freshState = useStore.getState();
+      if (freshState.renderingPages.includes(pageIndex) || freshState.renderedPages[pageIndex]) {
         scheduleNext(() => renderNext(index + 1));
         return;
       }

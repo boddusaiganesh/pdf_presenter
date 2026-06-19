@@ -411,10 +411,14 @@ export const useStore = create<AppStore>()(
       },
 
       deleteSession: (sessionId) => {
+        // Clean up IDB PDF data asynchronously
         del(`pdf_data_${sessionId}`).catch(() => {});
         set((s) => ({
           sessions: s.sessions.filter((sess) => sess.id !== sessionId),
           currentSession: s.currentSession?.id === sessionId ? null : s.currentSession,
+          // Clear rendered pages if we're deleting the active session
+          renderedPages: s.currentSession?.id === sessionId ? {} : s.renderedPages,
+          renderingPages: s.currentSession?.id === sessionId ? [] : s.renderingPages,
         }));
       },
 
