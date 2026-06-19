@@ -24,6 +24,7 @@ export default function SlideCanvas({ isPresenting = false }: SlideCanvasProps) 
   } = useStore();
 
   const canvasContainerRef = useRef<HTMLDivElement>(null);
+  const outerWrapperRef = useRef<HTMLDivElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 1280, height: 720 });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
@@ -40,21 +41,26 @@ export default function SlideCanvas({ isPresenting = false }: SlideCanvasProps) 
 
   // ── Resize observer ─────────────────────────────────────────────────────────────────────────────
   useEffect(() => {
-    const container = canvasContainerRef.current?.parentElement;
+    const container = outerWrapperRef.current;
     if (!container) return;
+    let rafId: number | null = null;
     const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        const aspectRatio = 16 / 9;
-        let w = width;
-        let h = width / aspectRatio;
-        if (h > height) { h = height; w = height * aspectRatio; }
-        setCanvasSize({ width: Math.floor(w), height: Math.floor(h) });
-      }
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        for (const entry of entries) {
+          const { width, height } = entry.contentRect;
+          const aspectRatio = 16 / 9;
+          let w = width;
+          let h = width / aspectRatio;
+          if (h > height) { h = height; w = height * aspectRatio; }
+          setCanvasSize({ width: Math.floor(w), height: Math.floor(h) });
+        }
+        rafId = null;
+      });
     });
     observer.observe(container);
-    return () => observer.disconnect();
-  }, []);
+    return () => { observer.disconnect(); if (rafId !== null) cancelAnimationFrame(rafId); };
+  }, [];
 
   // ── Reset panOffset when zoom returns to 1 ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -364,6 +370,7 @@ export default function SlideCanvas({ isPresenting = false }: SlideCanvasProps) 
 
   return (
     <div
+      ref={outerWrapperRef}
       className="relative w-full h-full flex items-center justify-center overflow-hidden bg-[#0a0b0f]"
       onMouseMove={handleMouseMove}
       onMouseDown={handleMouseDown}
