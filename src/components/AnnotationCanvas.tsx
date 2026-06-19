@@ -42,19 +42,22 @@ export default function AnnotationCanvas({ width, height, slideId, popupId }: An
     currentSession, updateAnnotation,
   } = useStore();
 
-  // Keep refs in sync with latest store values
-  useEffect(() => { toolRef.current = currentTool; }, [currentTool]);
-  useEffect(() => { colorRef.current = drawColor; }, [drawColor]);
-  useEffect(() => { sizeRef.current = drawSize; }, [drawSize]);
-  useEffect(() => { opacityRef.current = drawOpacity; }, [drawOpacity]);
-  useEffect(() => { dashedRef.current = isDashedStroke; }, [isDashedStroke]);
-  useEffect(() => { filledRef.current = isFilled; }, [isFilled]);
-  useEffect(() => { fontFamilyRef.current = fontFamily; }, [fontFamily]);
-  useEffect(() => { fontSizeRef.current = fontSize; }, [fontSize]);
-  useEffect(() => { boldRef.current = isBold; }, [isBold]);
-  useEffect(() => { italicRef.current = isItalic; }, [isItalic]);
-  useEffect(() => { slideIdRef.current = slideId; }, [slideId]);
-  useEffect(() => { popupIdRef.current = popupId; }, [popupId]);
+  // Keep refs in sync with latest store values — single effect instead of 12
+  useEffect(() => {
+    toolRef.current = currentTool;
+    colorRef.current = drawColor;
+    sizeRef.current = drawSize;
+    opacityRef.current = drawOpacity;
+    dashedRef.current = isDashedStroke;
+    filledRef.current = isFilled;
+    fontFamilyRef.current = fontFamily;
+    fontSizeRef.current = fontSize;
+    boldRef.current = isBold;
+    italicRef.current = isItalic;
+    slideIdRef.current = slideId;
+    popupIdRef.current = popupId;
+  }, [currentTool, drawColor, drawSize, drawOpacity, isDashedStroke, isFilled,
+      fontFamily, fontSize, isBold, isItalic, slideId, popupId]);
 
   const updateAnnotationRef = useRef(updateAnnotation);
   useEffect(() => { updateAnnotationRef.current = updateAnnotation; }, [updateAnnotation]);
