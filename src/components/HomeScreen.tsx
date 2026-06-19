@@ -45,7 +45,7 @@ export default function HomeScreen() {
       setLoadingProgress(10);
 
       const session = createSession(file.name, totalPages);
-      
+
       // Store raw PDF data separately from the Zustand store to prevent state tree bloat and memory leaks
       const { set: idbSet } = await import('idb-keyval');
       await idbSet(`pdf_data_${session.id}`, base64);
@@ -57,6 +57,8 @@ export default function HomeScreen() {
           const dataURL = await renderPage(i, settings.renderingQuality, settings.compressionContrastBoost, settings.contrastBoostStrength);
           addRenderedPage(i, dataURL);
           if (i === 0) {
+            // Use the store's updateSession — by this point createSession has already
+            // called set({ currentSession: session }) so currentSession is guaranteed set.
             updateSession({ thumbnail: dataURL });
           }
           setLoadingProgress(10 + (i + 1) * (80 / preloadCount));
