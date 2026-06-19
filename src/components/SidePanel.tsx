@@ -14,6 +14,7 @@ interface SlideThumbnailProps {
   isActive: boolean;
   slideNumber: number;
   renderedPages: Record<number, string>;
+  thumbnailHeightClass: string;
   onSelect: () => void;
   onDragStart: (e: React.DragEvent, index: number) => void;
   onDragOver: (e: React.DragEvent, index: number) => void;
@@ -22,7 +23,7 @@ interface SlideThumbnailProps {
 }
 
 function SlideThumbnail({
-  slide, index, isActive, slideNumber, renderedPages,
+  slide, index, isActive, slideNumber, renderedPages, thumbnailHeightClass,
   onSelect, onDragStart, onDragOver, onDrop, onContextMenu
 }: SlideThumbnailProps) {
   const [isDragOver, setIsDragOver] = useState(false);
@@ -82,7 +83,7 @@ function SlideThumbnail({
           <MoreHorizontal className="w-4 h-4" />
         </button>
       </div>
-      <div className="aspect-video bg-slate-900 rounded-lg overflow-hidden">
+      <div className={cn('w-full bg-slate-900 rounded-lg overflow-hidden', thumbnailHeightClass)}>
         {getSlidePreview()}
       </div>
       <div className="flex items-center justify-between mt-1.5 px-0.5">
@@ -324,6 +325,7 @@ export default function SidePanel() {
                 isActive={isActive}
                 slideNumber={slide.hidden ? index + 1 : displayNumber}
                 renderedPages={renderedPages}
+                thumbnailHeightClass={thumbnailHeightClass}
                 onSelect={() => setCurrentSlideIndex(index)}
                 onDragStart={handleDragStart}
                 onDragOver={handleDragOver}
