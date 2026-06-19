@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { useStore } from './store/useStore';
 import HomeScreen from './components/HomeScreen';
@@ -52,26 +52,21 @@ export default function App() {
     };
   }, []);
 
-  const renderScreen = () => {
+  const screen = useMemo(() => {
     switch (currentScreen) {
-      case 'home':
-        return <HomeScreen />;
-      case 'editor':
-        return <EditorView />;
-      case 'preflight':
-        return <PreflightCheck />;
-      case 'presenting':
-        return <PresentingView />;
-      case 'post-session':
-        return <PostSession />;
-      default:
-        return <HomeScreen />;
+      case 'home':        return <HomeScreen />;
+      case 'editor':      return <EditorView />;
+      case 'preflight':   return <PreflightCheck />;
+      case 'presenting':  return <PresentingView />;
+      case 'post-session': return <PostSession />;
+      default:            return <HomeScreen />;
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentScreen]);
 
   return (
     <div className="h-screen w-screen overflow-hidden">
-      {renderScreen()}
+      {screen}
       <Toaster
         position="top-right"
         toastOptions={{

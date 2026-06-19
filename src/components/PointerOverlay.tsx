@@ -1,72 +1,97 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
-import { cn } from '../utils/cn';
 
-interface Trail {
-  x: number;
-  y: number;
-  id: number;
-  opacity: number;
-}
+// Trail point stored outside React state to avoid re-renders on every mousemove
+interface TrailPoint { x: number; y: number; opacity: number; }
 
 export default function PointerOverlay() {
   const { pointerMode, pointerPosition, settings } = useStore();
-  const [trails, setTrails] = useState<Trail[]>([]);
-  const trailIdRef = useRef(0);
+
+  // Canvas ref for laser trail — drawn imperatively, zero React re-renders per frame
+  const trailCanvasRef = useRef<HTMLCanvasElement>(null);
+  const trailPointsRef = useRef<TrailPoint[]>([]);
+  const rafRef = useRef<number | null>(null);
 
   const trailLengths = { short: 5, medium: 10, long: 18 };
-  const maxTrails = trailLengths[settings.laserTrailLength];
 
+  // Draw trail on canvas imperatively
   useEffect(() => {
-    // Performance guard: skip all trail work when not in laser mode
     if (pointerMode !== 'laser' || !settings.laserTrail) {
-      if (trails.length > 0) setTrails([]);
+      // Clear trail canvas when not in laser mode
+      const canvas = trailCanvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx?.clearRect(0, 0, canvas.width, canvas.height);
+      }
+      trailPointsRef.current = [];
       return;
     }
 
-    const newTrail: Trail = {
-      x: pointerPosition.x,
-      y: pointerPosition.y,
-      id: trailIdRef.current++,
-      opacity: 1,
-    };
+    const maxTrails = trailLengths[settings.laserTrailLength];
+    const { x, y } = pointerPosition;
+    const laserColor = settings.laserColor;
+    const laserSize = settings.laserSize;
+    const glowIntensity = settings.laserGlow / 100;
 
-    setTrails((prev) => {
-      const updated = [newTrail, ...prev].slice(0, maxTrails).map((t, i) => ({
-        ...t,
-        opacity: 1 - i / maxTrails,
-      }));
-      return updated;
+    // Add new point
+    trailPointsRef.current = [
+      { x, y, opacity: 1 },
+      ...trailPointsRef.current.slice(0, maxTrails - 1),
+    ].map((p, i, arr) => ({ ...p, opacity: 1 - i / arr.length }));
+
+    // Draw on canvas
+    const canvas = trailCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    trailPointsRef.current.slice(1).forEach((point) => {
+      const size = laserSize * point.opacity * 0.8;
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, size / 2, 0, Math.PI * 2);
+      ctx.fillStyle = laserColor;
+      ctx.globalAlpha = point.opacity * 0.6;
+      if (glowIntensity > 0) ctx.filter = `blur(${2 * glowIntensity}px)`;
+      ctx.fill();
+      ctx.filter = 'none';
+      ctx.globalAlpha = 1;
     });
-  }, [pointerPosition, pointerMode, settings.laserTrail, settings.laserTrailLength, maxTrails]); // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pointerPosition, pointerMode, settings.laserTrail, settings.laserTrailLength,
+      settings.laserColor, settings.laserSize, settings.laserGlow]);
+
+  // Keep trail canvas sized to viewport
+  useEffect(() => {
+    const canvas = trailCanvasRef.current;
+    if (!canvas) return;
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resize();
+    window.addEventListener('resize', resize);
+    return () => window.removeEventListener('resize', resize);
+  }, []);
 
   if (pointerMode === 'normal') return null;
 
   const { x, y } = pointerPosition;
   const laserColor = settings.laserColor;
   const laserSize = settings.laserSize;
+  const glowIntensity = settings.laserGlow / 100;
 
   if (pointerMode === 'laser') {
-    const glowIntensity = settings.laserGlow / 100;
     return (
       <div className="pointer-events-none fixed inset-0 z-[9999]" style={{ cursor: 'none' }}>
-        {/* Trail */}
-        {settings.laserTrail && trails.slice(1).map((trail) => (
-          <div
-            key={trail.id}
-            className="fixed rounded-full"
-            style={{
-              left: trail.x,
-              top: trail.y,
-              width: laserSize * trail.opacity * 0.8,
-              height: laserSize * trail.opacity * 0.8,
-              transform: 'translate(-50%, -50%)',
-              background: laserColor,
-              opacity: trail.opacity * 0.6,
-              filter: `blur(${2 * glowIntensity}px)`,
-            }}
+        {/* Trail rendered on canvas — no React state, no re-renders per frame */}
+        {settings.laserTrail && (
+          <canvas
+            ref={trailCanvasRef}
+            className="fixed inset-0"
+            style={{ width: '100%', height: '100%' }}
           />
-        ))}
+        )}
         {/* Main dot */}
         <div
           className="fixed rounded-full"
@@ -168,43 +193,22 @@ export default function PointerOverlay() {
   if (pointerMode === 'magnifier') {
     const magSize = 180;
     const zoom = 2.5;
-    // The zoomed region is magSize/zoom wide/tall in screen pixels
-    const regionW = magSize / zoom;
-    const regionH = magSize / zoom;
     return (
       <div className="pointer-events-none fixed inset-0 z-[9999]" style={{ cursor: 'none' }}>
-        {/* Lens border ring */}
         <div
-          className="fixed rounded-full border-[3px] border-white/90 shadow-2xl overflow-hidden"
+          className="fixed rounded-full border-[3px] border-white/90 shadow-2xl"
           style={{
             left: x - magSize / 2,
             top: y - magSize / 2,
             width: magSize,
             height: magSize,
             boxShadow: '0 0 0 1px rgba(0,0,0,0.4), 0 8px 32px rgba(0,0,0,0.6)',
-            // Zoom the page content under the lens using CSS transform on a cloned region
-            // We use a backdrop-filter trick: scale the underlying pixels via a wrapper
-            backdropFilter: 'none',
-            background: 'transparent',
+            background: 'rgba(255,255,255,0.05)',
           }}
-        >
-          {/* Inner zoom layer — positions the page content scaled up */}
-          <div
-            style={{
-              position: 'absolute',
-              width: window.innerWidth,
-              height: window.innerHeight,
-              // Shift so the cursor point maps to the lens center, then scale
-              transform: `scale(${zoom}) translate(${-(x - regionW / 2) / zoom * (zoom - 1) / (zoom - 1)}px, 0)`,
-              transformOrigin: `${x - regionW / 2}px ${y - regionH / 2}px`,
-              pointerEvents: 'none',
-            }}
-          />
-        </div>
-        {/* Crosshair at cursor center */}
+        />
+        {/* Crosshair */}
         <div className="fixed bg-white/70" style={{ left: x - 0.5, top: y - 8, width: 1, height: 16, transform: 'translateX(-50%)' }} />
         <div className="fixed bg-white/70" style={{ left: x - 8, top: y - 0.5, width: 16, height: 1, transform: 'translateY(-50%)' }} />
-        {/* Zoom label */}
         <div
           className="fixed px-1.5 py-0.5 rounded text-[10px] font-mono text-white/80 bg-black/60"
           style={{ left: x + magSize / 2 - 28, top: y + magSize / 2 + 6 }}

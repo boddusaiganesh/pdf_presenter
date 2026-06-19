@@ -443,13 +443,15 @@ export const useStore = create<AppStore>()(
       // ── Slides ──
       currentSlideIndex: 0,
       setCurrentSlideIndex: (index) => {
-        const { currentSession, timer, recordSlideTime } = get();
+        const state = get();
+        const { currentSession, timer, recordSlideTime } = state;
         if (!currentSession) return;
         const slides = currentSession.slides;
+        if (slides.length === 0) return;
         const clampedIndex = Math.max(0, Math.min(index, slides.length - 1));
 
         // Skip hidden slides — find next visible in the direction of travel
-        const direction = index >= get().currentSlideIndex ? 1 : -1;
+        const direction = index >= state.currentSlideIndex ? 1 : -1;
         let finalIndex = clampedIndex;
         if (slides[clampedIndex]?.hidden) {
           let search = clampedIndex + direction;
@@ -457,9 +459,14 @@ export const useStore = create<AppStore>()(
             if (!slides[search].hidden) { finalIndex = search; break; }
             search += direction;
           }
+          // If no visible slide found in that direction, stay put
+          if (slides[finalIndex]?.hidden) return;
         }
 
-        const currentSlide = slides[get().currentSlideIndex];
+        // Don't trigger a state update if the index hasn't changed
+        if (finalIndex === state.currentSlideIndex) return;
+
+        const currentSlide = slides[state.currentSlideIndex];
         if (currentSlide && timer.running) recordSlideTime(currentSlide.id);
         set({ currentSlideIndex: finalIndex });
       },
@@ -556,8 +563,8 @@ export const useStore = create<AppStore>()(
           const slides = s.currentSession.slides.map((slide) => {
             if (slide.id !== slideId) return slide;
             if (popupId) {
-              const popups = slide.popups?.map(p => 
-                p.id === popupId 
+              const popups = slide.popups?.map(p =>
+                p.id === popupId
                   ? { ...p, annotation: { id: p.id, visible: true, locked: false, ...(p.annotation || {}), fabricJSON } }
                   : p
               );
@@ -565,11 +572,9 @@ export const useStore = create<AppStore>()(
             }
             return { ...slide, annotation: { ...slide.annotation, fabricJSON } };
           });
-          const updated = { ...s.currentSession, slides };
-          return {
-            currentSession: updated,
-            sessions: s.sessions.map((sess) => (sess.id === updated.id ? updated : sess)),
-          };
+          // Only update currentSession during active drawing — sessions array is
+          // synced on saveCurrentSession() to avoid O(n) map on every stroke.
+          return { currentSession: { ...s.currentSession, slides } };
         });
       },
 
@@ -804,7 +809,22 @@ export const useStore = create<AppStore>()(
       pointerMode: 'normal',
       pointerPosition: { x: 0, y: 0 },
       setPointerMode: (mode) => set({ pointerMode: mode }),
-      setPointerPosition: (pos) => set({ pointerPosition: pos }),
+      // Throttle pointer position updates to one per animation frame (~60fps).
+      // Raw mousemove fires at 200+ Hz on some devices; writing to Zustand on
+      // every event causes unnecessary re-renders across all subscribers.
+      setPointerPosition: (() => {
+        let rafPending = false;
+        let latestPos = { x: 0, y: 0 };
+        return (pos: { x: number; y: number }) => {
+          latestPos = pos;
+          if (rafPending) return;
+          rafPending = true;
+          requestAnimationFrame(() => {
+            set({ pointerPosition: latestPos });
+            rafPending = false;
+          });
+        };
+      })(),
 
       // ── Timer ──
       timer: {

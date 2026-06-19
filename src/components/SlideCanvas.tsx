@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useStore } from '../store/useStore';
 import { renderPage } from '../utils/pdfRenderer';
-import { detectMediaType, isVideoType } from '../utils/mediaDetector';
+import { detectMediaType } from '../utils/mediaDetector';
 import AnnotationCanvas from './AnnotationCanvas';
 import SlidePopup from './SlidePopup';
 import html2canvas from 'html2canvas';
@@ -24,13 +24,13 @@ export default function SlideCanvas({ isPresenting = false }: SlideCanvasProps) 
   } = useStore();
 
   const canvasContainerRef = useRef<HTMLDivElement>(null);
+  const outerWrapperRef = useRef<HTMLDivElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 1280, height: 720 });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [frozenImage, setFrozenImage] = useState<string | null>(null);
   const previousIsFrozen = useRef(isFrozen);
-  const [videoRef] = useState(() => ({ current: null as HTMLVideoElement | null }));
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   // Slide fade transition state
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -41,21 +41,26 @@ export default function SlideCanvas({ isPresenting = false }: SlideCanvasProps) 
 
   // ── Resize observer ─────────────────────────────────────────────────────────────────────────────
   useEffect(() => {
-    const container = canvasContainerRef.current?.parentElement;
+    const container = outerWrapperRef.current;
     if (!container) return;
+    let rafId: number | null = null;
     const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        const aspectRatio = 16 / 9;
-        let w = width;
-        let h = width / aspectRatio;
-        if (h > height) { h = height; w = height * aspectRatio; }
-        setCanvasSize({ width: Math.floor(w), height: Math.floor(h) });
-      }
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        for (const entry of entries) {
+          const { width, height } = entry.contentRect;
+          const aspectRatio = 16 / 9;
+          let w = width;
+          let h = width / aspectRatio;
+          if (h > height) { h = height; w = height * aspectRatio; }
+          setCanvasSize({ width: Math.floor(w), height: Math.floor(h) });
+        }
+        rafId = null;
+      });
     });
     observer.observe(container);
-    return () => observer.disconnect();
-  }, []);
+    return () => { observer.disconnect(); if (rafId !== null) cancelAnimationFrame(rafId); };
+  }, [];
 
   // ── Reset panOffset when zoom returns to 1 ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -177,12 +182,12 @@ export default function SlideCanvas({ isPresenting = false }: SlideCanvasProps) 
   // ── Mouse tracking ────────────────────────────────────────────────────────────────────────────────────────
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     setPointerPosition({ x: e.clientX, y: e.clientY });
-    if (isPanning && zoomLevel > 1) {
-      const dx = e.clientX - panStart.x;
-      const dy = e.clientY - panStart.y;
-      setPanOffset({ x: panOffset.x + dx, y: panOffset.y + dy });
-      setPanStart({ x: e.clientX, y: e.clientY });
-    }
+    // Only update pan offset when actively panning — avoids unnecessary state writes
+    if (!isPanning || zoomLevel <= 1) return;
+    const dx = e.clientX - panStart.x;
+    const dy = e.clientY - panStart.y;
+    setPanOffset({ x: panOffset.x + dx, y: panOffset.y + dy });
+    setPanStart({ x: e.clientX, y: e.clientY });
   }, [isPanning, panStart, panOffset, setPointerPosition, setPanOffset, zoomLevel]);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
@@ -264,13 +269,11 @@ export default function SlideCanvas({ isPresenting = false }: SlideCanvasProps) 
         return (
           <div className="absolute inset-0 bg-black">
             <video
-              ref={(el) => { videoRef.current = el; }}
+              ref={videoRef}
               src={detected.embedUrl}
               className={cn('w-full h-full object-contain', pointerMode !== 'normal' && 'pointer-events-none')}
               controls={pointerMode === 'normal'}
               autoPlay={settings.autoAdvanceSeconds === 0}
-              onPlay={() => setIsVideoPlaying(true)}
-              onPause={() => setIsVideoPlaying(false)}
             />
           </div>
         );
@@ -367,6 +370,7 @@ export default function SlideCanvas({ isPresenting = false }: SlideCanvasProps) 
 
   return (
     <div
+      ref={outerWrapperRef}
       className="relative w-full h-full flex items-center justify-center overflow-hidden bg-[#0a0b0f]"
       onMouseMove={handleMouseMove}
       onMouseDown={handleMouseDown}
