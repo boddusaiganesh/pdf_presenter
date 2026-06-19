@@ -6,6 +6,7 @@ import PointerOverlay from './PointerOverlay';
 import SettingsPanel from './SettingsPanel';
 import { cn } from '../utils/cn';
 import toast from 'react-hot-toast';
+import { X } from 'lucide-react';
 
 export default function PresentingView() {
   const {
@@ -140,12 +141,18 @@ export default function PresentingView() {
       case '0':
         if (ctrl) { e.preventDefault(); setZoomLevel(1); }
         break;
-      case 'Escape':
+      case 'Escape': {
+        const hadOverlay = isOverviewMode || isBlackScreen || pointerMode !== 'normal' || currentTool !== 'select';
         setIsOverviewMode(false);
         if (isBlackScreen) setIsBlackScreen(false);
         if (pointerMode !== 'normal') setPointerMode('normal');
         if (currentTool !== 'select') setCurrentTool('select');
+        // If nothing was active, Escape acts as "exit presenting" so user is never trapped
+        if (!hadOverlay) {
+          useStore.getState().setCurrentScreen('editor');
+        }
         break;
+      }
     }
   }, [
     currentSlideIndex, slides, isBlackScreen, isFrozen,
@@ -229,6 +236,15 @@ export default function PresentingView() {
       >
         <FloatingToolbar />
       </div>
+
+      {/* Always-visible exit button — ensures user can never be trapped in PresentingView */}
+      <button
+        onClick={() => useStore.getState().setCurrentScreen('editor')}
+        className="fixed top-3 right-3 z-[9998] w-8 h-8 rounded-lg bg-black/40 border border-white/10 flex items-center justify-center text-white/30 hover:text-white hover:bg-black/70 transition-all"
+        title="Exit Presenting (Esc)"
+      >
+        <X className="w-4 h-4" />
+      </button>
 
       {showSettings && <SettingsPanel />}
     </div>
