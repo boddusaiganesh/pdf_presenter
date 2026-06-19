@@ -20,6 +20,8 @@ export default function PresentingView() {
     zoomLevel, setZoomLevel,
     settings, showSettings,
     clearSlideAnnotation, clearAllAnnotations,
+    saveCurrentSession,
+    timer, startTimer, pauseTimer,
   } = useStore();
 
   const toolbarTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
