@@ -37,7 +37,6 @@ export default function EditorView() {
   } = useStore();
 
   const [showNotePanel, setShowNotePanel] = useState(false);
-  // Use useRef instead of useState to avoid re-renders on every timer set/clear
   const toolbarHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMouseNearToolbar = useRef(false);
 
@@ -45,6 +44,14 @@ export default function EditorView() {
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const headerHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMouseNearHeader = useRef(false);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (toolbarHideTimerRef.current) clearTimeout(toolbarHideTimerRef.current);
+      if (headerHideTimer.current) clearTimeout(headerHideTimer.current);
+    };
+  }, []);
 
   const slides = currentSession?.slides || [];
 
@@ -204,17 +211,25 @@ export default function EditorView() {
   };
 
   // Track mouse position for pointer overlay
+  // Only reschedule the header-hide timer when the mouse first enters the top zone,
+  // not on every pixel of movement (avoids hundreds of dangling timers per second).
+  const isInHeaderZoneRef = useRef(false);
   const handleMouseMove = useCallback((e: MouseEvent) => {
     setPointerPosition({ x: e.clientX, y: e.clientY });
 
     if (document.fullscreenElement) {
       const isOverSidePanel = isSidePanelOpen && e.clientX < 224;
-      if (e.clientY < 60 && !isOverSidePanel) {
+      const inZone = e.clientY < 60 && !isOverSidePanel;
+      if (inZone && !isInHeaderZoneRef.current) {
+        // Entered the zone — show header and start hide timer
+        isInHeaderZoneRef.current = true;
         setIsHeaderVisible(true);
         if (headerHideTimer.current) clearTimeout(headerHideTimer.current);
         headerHideTimer.current = setTimeout(() => {
           if (!isMouseNearHeader.current) setIsHeaderVisible(false);
         }, settings.toolbarAutoHideDelay || 3000);
+      } else if (!inZone) {
+        isInHeaderZoneRef.current = false;
       }
     }
   }, [setPointerPosition, settings.toolbarAutoHideDelay, isSidePanelOpen]);
